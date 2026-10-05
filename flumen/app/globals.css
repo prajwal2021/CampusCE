@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #27272a transparent;
+  }
+  *::-webkit-scrollbar { width: 6px; height: 6px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-2 border border-surface-4 rounded-xl p-5;
+  }
+  .card-sm {
+    @apply bg-surface-2 border border-surface-4 rounded-lg p-4;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
+           bg-accent text-white text-sm font-medium
+           hover:bg-accent-hover active:scale-[0.97]
+           transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg
+           text-sm font-medium text-zinc-400
+           hover:bg-surface-3 hover:text-zinc-200
+           transition-all duration-150;
+  }
+  .btn-outline {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
+           text-sm font-medium border border-surface-4 text-zinc-300
+           hover:bg-surface-3 hover:border-zinc-600
+           transition-all duration-150;
+  }
+
+  .badge-ok {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+           text-xs font-medium bg-emerald-500/10 text-emerald-400;
+  }
+  .badge-warn {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+           text-xs font-medium bg-amber-500/10 text-amber-400;
+  }
+  .badge-err {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+           text-xs font-medium bg-red-500/10 text-red-400;
+  }
+  .badge-info {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+           text-xs font-medium bg-accent/10 text-accent;
+  }
+
+  .metric-value {
+    @apply text-2xl font-semibold text-zinc-100 tabular-nums;
+  }
+  .metric-label {
+    @apply text-xs font-medium uppercase tracking-wider text-zinc-500;
+  }
+
+  .table-header {
+    @apply text-left text-xs font-medium uppercase tracking-wider text-zinc-500
+           px-4 py-3 bg-surface-1 border-b border-surface-4
+           select-none cursor-pointer hover:text-zinc-300 transition-colors;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-zinc-300 border-b border-surface-3
+           font-mono truncate max-w-[300px];
+  }
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+/* Custom animation for the topology flow */
+@keyframes flowPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+.flow-dot {
+  animation: flowPulse 2s ease-in-out infinite;
+}

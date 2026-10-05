@@ -8,3 +8,9 @@ staging/
 *.env
 .env*
 secrets/
+
+# Node / Next.js
+node_modules/
+.next/
+flumen/.next/
+flumen/node_modules/
