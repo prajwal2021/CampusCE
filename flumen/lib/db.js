@@ -20,7 +20,7 @@ const SSH_KEY   = process.env.SSH_KEY_PATH || path.join(
 );
 
 const PG_USER        = process.env.PG_USER     || 'campusce_etl';
-const PG_PASS        = process.env.PG_PASSWORD || '';
+const PG_PASS        = process.env.PG_PASSWORD || undefined;  // undefined = skip auth (trust)
 const PG_DB          = process.env.PG_DATABASE || 'CampusCE_ADS_DB';
 const PG_REMOTE_HOST = '127.0.0.1';
 const PG_REMOTE_PORT = parseInt(process.env.PG_REMOTE_PORT || '5433');
