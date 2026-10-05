@@ -14,10 +14,7 @@ const path = require('path');
 const SSH_HOST  = process.env.SSH_HOST  || 'tosmonline0003.ttu.edu';
 const SSH_PORT  = parseInt(process.env.SSH_PORT || '22');
 const SSH_USER  = process.env.SSH_USER  || 'prajsrin';
-const SSH_KEY   = process.env.SSH_KEY_PATH || path.join(
-  process.env.HOME || process.env.USERPROFILE || '/home/prajsrin',
-  '.ssh', 'id_ed25519_ttu'
-);
+const SSH_KEY   = process.env.SSH_KEY_PATH || '/ssh/id_ed25519_ttu';
 
 const PG_USER        = process.env.PG_USER     || 'campusce_etl';
 const PG_PASS        = process.env.PG_PASSWORD || undefined;  // undefined = skip auth (trust)
