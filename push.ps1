@@ -32,6 +32,7 @@ catch { Log 'Another push is already running; exiting.'; exit 3 }
 
 $sshOpts = @('-i', $KeyPath, '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20')
 function Invoke-Remote([string]$cmd) {
+    $ErrorActionPreference = 'Continue'   # ssh/git write harmless warnings to stderr; judge success by exit code
     $out = & ssh @sshOpts $Remote $cmd 2>&1
     $code = $LASTEXITCODE
     # drop OpenSSH's post-quantum warning noise
@@ -68,8 +69,11 @@ foreach ($run in $pending) {
     $have = (Invoke-Remote "test -f $base/inbox/$id/.uploaded && echo yes || echo no") -join ''
     if ($have -notmatch 'yes') {
         [void](Invoke-Remote "rm -rf $base/inbox/$id")
+        $ErrorActionPreference = 'Continue'
         & scp -r @sshOpts $run.FullName "${Remote}:campusce_pipeline/inbox/" 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) { Log "  upload of $id failed; will retry next run"; $failed = $true; break }
+        $scpExit = $LASTEXITCODE
+        $ErrorActionPreference = 'Stop'
+        if ($scpExit -ne 0) { Log "  upload of $id failed; will retry next run"; $failed = $true; break }
         [void](Invoke-Remote "touch $base/inbox/$id/.uploaded")
         Log '  uploaded'
     } else { Log '  already uploaded' }
