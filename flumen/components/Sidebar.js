@@ -6,11 +6,11 @@ import { LayoutDashboard, Database, GitBranch, ArrowLeftRight, Activity, Droplet
 import clsx from 'clsx';
 
 const NAV = [
-  { href: '/flumen',            label: 'Dashboard',  icon: LayoutDashboard },
-  { href: '/flumen/data',       label: 'Data',       icon: Database },
-  { href: '/flumen/topology',   label: 'Topology',   icon: GitBranch },
-  { href: '/flumen/comparison', label: 'Comparison', icon: ArrowLeftRight },
-  { href: '/flumen/activity',   label: 'Activity',   icon: Activity },
+  { href: '/',            label: 'Dashboard',  icon: LayoutDashboard },
+  { href: '/data',        label: 'Data',       icon: Database },
+  { href: '/topology',    label: 'Topology',   icon: GitBranch },
+  { href: '/comparison',  label: 'Comparison', icon: ArrowLeftRight },
+  { href: '/activity',    label: 'Activity',   icon: Activity },
 ];
 
 export default function Sidebar() {
@@ -27,7 +27,7 @@ export default function Sidebar() {
       {/* Nav links */}
       <nav className="flex-1 py-4 px-3 space-y-1">
         {NAV.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href !== '/flumen' && pathname.startsWith(href));
+          const active = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link
               key={href}
