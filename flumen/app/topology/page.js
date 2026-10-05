@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { get } from '@/lib/api';
-import { Server, Database, Laptop, ArrowRight, Loader2, HardDrive, Container } from 'lucide-react';
+import {
+  Server, Database, Laptop, ArrowRight, Loader2, HardDrive,
+  Container, ChevronDown, Filter
+} from 'lucide-react';
+import clsx from 'clsx';
 
 function fmtBytes(b) {
   if (!b) return '0 B';
@@ -13,10 +17,19 @@ function fmtBytes(b) {
 
 export default function Topology() {
   const [topo, setTopo] = useState(null);
+  const [databases, setDatabases] = useState([]);
+  const [selectedDb, setSelectedDb] = useState('CampusCE_ADS_DB');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    get('/topology').then(d => { setTopo(d); setLoading(false); }).catch(() => setLoading(false));
+    Promise.all([
+      get('/topology'),
+      get('/databases'),
+    ]).then(([t, d]) => {
+      setTopo(t);
+      setDatabases(d.databases || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   if (loading) return (
@@ -26,76 +39,103 @@ export default function Topology() {
   );
 
   const { ads, laptop, pg } = topo?.nodes || {};
+  const isCampusCE = selectedDb === 'CampusCE_ADS_DB';
+  const selectedDbInfo = databases.find(d => d.name === selectedDb);
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-100">Topology</h1>
-        <p className="text-sm text-zinc-500 mt-1">Infrastructure overview &amp; data flow</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-100">Topology</h1>
+          <p className="text-sm text-zinc-500 mt-1">Infrastructure overview &amp; data flow</p>
+        </div>
+
+        {/* DB Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-zinc-500" />
+          <div className="relative">
+            <select
+              value={selectedDb}
+              onChange={e => setSelectedDb(e.target.value)}
+              className="appearance-none bg-surface-2 border border-surface-4 rounded-lg px-3 py-2 pr-8
+                         text-sm text-zinc-200 focus:outline-none focus:border-accent/50 cursor-pointer"
+            >
+              {databases.map(db => (
+                <option key={db.name} value={db.name}>{db.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+          </div>
+        </div>
       </div>
 
       {/* Flow diagram */}
       <div className="card">
         <div className="flex items-center justify-center gap-6 py-8 flex-wrap">
-          {/* ADS Node */}
-          <NodeCard
-            icon={Server}
-            color="blue"
-            label={ads?.label || 'ADS SQL Server'}
-            host={ads?.host}
-            details={[`DB: ${ads?.db}`, 'Read-only access', 'Windows Auth (SSPI)']}
-          />
+          {isCampusCE && (
+            <>
+              <NodeCard
+                icon={Server}
+                color="blue"
+                label={ads?.label || 'ADS SQL Server'}
+                host={ads?.host}
+                details={[`DB: ${ads?.db}`, 'Read-only access', 'Windows Auth (SSPI)']}
+              />
+              <FlowArrow label="pull.ps1" sub="Batched SELECT" />
+              <NodeCard
+                icon={Laptop}
+                color="zinc"
+                label={laptop?.label || 'Laptop'}
+                host={laptop?.host}
+                details={['ETL orchestrator', 'Gzipped CSV staging', 'Scheduled hourly']}
+              />
+              <FlowArrow label="push.ps1" sub="SCP + Docker" />
+            </>
+          )}
 
-          {/* Arrow: ADS → Laptop */}
-          <FlowArrow label="pull.ps1" sub="Batched SELECT" />
-
-          {/* Laptop Node */}
-          <NodeCard
-            icon={Laptop}
-            color="zinc"
-            label={laptop?.label || 'Laptop'}
-            host={laptop?.host}
-            details={['ETL orchestrator', 'Gzipped CSV staging', 'Scheduled hourly']}
-          />
-
-          {/* Arrow: Laptop → PG */}
-          <FlowArrow label="push.ps1" sub="SCP + Docker" />
-
-          {/* PostgreSQL Node */}
           <NodeCard
             icon={Database}
             color="indigo"
-            label={pg?.label || 'PostgreSQL'}
+            label="PostgreSQL"
             host={pg?.host}
             details={[
-              `DB: ${pg?.db}`,
+              `DB: ${selectedDb}`,
               `Port: ${pg?.port}`,
-              `Tables: ${pg?.tables?.length || 0}`,
+              isCampusCE
+                ? `Tables: ${pg?.tables?.length || 0}`
+                : `Size: ${fmtBytes(parseInt(selectedDbInfo?.size_bytes || 0))}`,
             ]}
           />
         </div>
+        {!isCampusCE && (
+          <div className="text-center pb-4 text-xs text-zinc-500">
+            Pipeline only replicates CampusCE_ADS_DB. This database is hosted on the same server.
+          </div>
+        )}
       </div>
 
       {/* Detail panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ADS tables */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <h3 className="text-sm font-medium text-zinc-300">Source (MSSQL)</h3>
-          </div>
-          <div className="space-y-2">
-            <div className="text-xs text-zinc-500 mb-3">
-              {ads?.db} on {ads?.host}
+      <div className={clsx('grid gap-4', isCampusCE ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
+        {/* Source (only for CampusCE) */}
+        {isCampusCE && (
+          <div className="card">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <h3 className="text-sm font-medium text-zinc-300">Source (MSSQL)</h3>
             </div>
-            {(pg?.tables || []).map(t => (
-              <div key={t.table_name} className="flex items-center gap-2 py-1.5 px-2 rounded bg-surface-3/50">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span className="font-mono text-xs text-zinc-300 truncate">{t.table_name}</span>
+            <div className="space-y-2">
+              <div className="text-xs text-zinc-500 mb-3">
+                {ads?.db} on {ads?.host}
               </div>
-            ))}
+              {(pg?.tables || []).map(t => (
+                <div key={t.table_name} className="flex items-center gap-2 py-1.5 px-2 rounded bg-surface-3/50">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  <span className="font-mono text-xs text-zinc-300 truncate">{t.table_name}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Docker containers */}
         <div className="card">
@@ -121,10 +161,7 @@ export default function Topology() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-surface-4 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent rounded-full transition-all"
-                      style={{ width: pg.disk.pct }}
-                    />
+                    <div className="h-full bg-accent rounded-full transition-all" style={{ width: pg.disk.pct }} />
                   </div>
                   <span className="text-xs text-zinc-400 tabular-nums">{pg.disk.pct}</span>
                 </div>
@@ -134,28 +171,74 @@ export default function Topology() {
           </div>
         </div>
 
-        {/* PG tables */}
+        {/* Target tables */}
         <div className="card">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 rounded-full bg-accent" />
-            <h3 className="text-sm font-medium text-zinc-300">Target (PostgreSQL)</h3>
+            <h3 className="text-sm font-medium text-zinc-300">
+              {isCampusCE ? 'Target (PostgreSQL)' : selectedDb}
+            </h3>
           </div>
           <div className="space-y-2">
             <div className="text-xs text-zinc-500 mb-3">
-              {pg?.db} on {pg?.host}:{pg?.port}
+              {selectedDb} on {pg?.host}:{pg?.port}
             </div>
-            {(pg?.tables || []).map(t => (
-              <div key={t.table_name} className="flex items-center justify-between py-1.5 px-2 rounded bg-surface-3/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                  <span className="font-mono text-xs text-zinc-300 truncate">{t.table_name}</span>
+            {isCampusCE ? (
+              (pg?.tables || []).map(t => (
+                <div key={t.table_name} className="flex items-center justify-between py-1.5 px-2 rounded bg-surface-3/50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                    <span className="font-mono text-xs text-zinc-300 truncate">{t.table_name}</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 shrink-0 ml-2">
+                    {fmtBytes(parseInt(t.size_bytes || 0))}
+                  </span>
                 </div>
-                <span className="text-[10px] text-zinc-500 shrink-0 ml-2">
-                  {fmtBytes(parseInt(t.size_bytes || 0))}
+              ))
+            ) : (
+              <div className="p-4 rounded-lg bg-surface-3/30 text-center">
+                <Database className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                <p className="text-sm text-zinc-400">{selectedDb}</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {fmtBytes(parseInt(selectedDbInfo?.size_bytes || 0))}
+                  {selectedDbInfo?.table_count > 0 && ` · ${selectedDbInfo.table_count} tables`}
+                </p>
+                <p className="text-[10px] text-zinc-600 mt-2">
+                  Select CampusCE_ADS_DB to see replicated tables
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* All databases overview */}
+      <div className="card">
+        <h3 className="text-sm font-medium text-zinc-300 mb-4">All Databases on 0003</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {databases.map(db => (
+            <button
+              key={db.name}
+              onClick={() => setSelectedDb(db.name)}
+              className={clsx(
+                'p-3 rounded-lg border text-left transition-all',
+                selectedDb === db.name
+                  ? 'border-accent/40 bg-accent/5'
+                  : 'border-surface-4 bg-surface-3/30 hover:border-surface-4 hover:bg-surface-3/60'
+              )}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <Database className={clsx('w-3.5 h-3.5', selectedDb === db.name ? 'text-accent' : 'text-zinc-500')} />
+                <span className={clsx('text-xs font-medium truncate', selectedDb === db.name ? 'text-accent' : 'text-zinc-300')}>
+                  {db.name}
                 </span>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                <span>{fmtBytes(parseInt(db.size_bytes || 0))}</span>
+                {db.table_count > 0 && <span>· {db.table_count} tables</span>}
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </div>

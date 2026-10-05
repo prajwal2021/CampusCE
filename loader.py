@@ -70,11 +70,21 @@ def load_table(conn, schema_json, expected_rows):
                        WHERE table_schema = %s AND table_name = %s ORDER BY ordinal_position""",
                     (TARGET_SCHEMA, table.lower()))
         existing = [r[0] for r in cur.fetchall()]
-        if existing != names:
-            raise RuntimeError(f'{table}: schema drift (target columns {existing} != source {names}); '
-                               'review and alter the target table manually')
 
-        cur.execute(f'CREATE TEMP TABLE stg (LIKE {target} INCLUDING DEFAULTS) ON COMMIT DROP')
+        # Auto-add columns that exist in source but not yet in the target
+        for c in cols:
+            cn = c['name'].lower()
+            if cn not in existing:
+                cur.execute(f'ALTER TABLE {target} ADD COLUMN {ident(cn)} {c["pgtype"]}')
+                log(f'  added column {cn} ({c["pgtype"]}) to {table}')
+
+        removed = [c for c in existing if c not in names]
+        if removed:
+            log(f'  warning: {table} target has columns not in source: {removed}')
+
+        # Create staging table matching source column order (CSV column order)
+        stg_defs = ', '.join(f'{ident(c["name"])} {c["pgtype"]}' for c in cols)
+        cur.execute(f'CREATE TEMP TABLE stg ({stg_defs}) ON COMMIT DROP')
         batches = sorted(glob.glob(os.path.join(RUN_DIR, 'data', table, '*.csv.gz')))
         for b in batches:
             with gzip.open(b, 'rt', encoding='utf-8', newline='') as fh:

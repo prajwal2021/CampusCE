@@ -5,7 +5,7 @@ import { get, post } from '@/lib/api';
 import {
   Clock, Database, HardDrive, ArrowDownToLine, ArrowUpFromLine,
   RefreshCw, CheckCircle2, AlertCircle, Loader2, Server, X,
-  AlertTriangle, Terminal, Copy, Package, Table2
+  AlertTriangle, Terminal, Copy, Package, Table2, Timer
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -28,16 +28,47 @@ function fmtNum(n) {
   return (n ?? 0).toLocaleString();
 }
 
+function getNextPull(lastFinished, now) {
+  if (!lastFinished) return { next: null, overdue: true, label: 'No runs yet' };
+  const last = new Date(lastFinished);
+  const eligible = new Date(last.getTime() + 8 * 3600000);
+  let next = new Date(eligible);
+  if (next.getMinutes() > 5 || (next.getMinutes() === 5 && next.getSeconds() > 0)) {
+    next.setHours(next.getHours() + 1);
+  }
+  next.setMinutes(5, 0, 0);
+  return { next, overdue: next <= now };
+}
+
+function getNextPush(now) {
+  let next = new Date(now);
+  if (next.getMinutes() >= 35) {
+    next.setHours(next.getHours() + 1);
+  }
+  next.setMinutes(35, 0, 0);
+  return { next, overdue: false };
+}
+
+function fmtCountdown(next, now) {
+  if (!next) return '—';
+  const diff = next - now;
+  if (diff <= 0) return 'now';
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
 export default function Dashboard() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [now, setNow] = useState(new Date());
 
-  /* Pull state */
   const [pulling, setPulling] = useState(false);
   const [pullResult, setPullResult] = useState(null);
-
-  /* Push state */
   const [pushing, setPushing] = useState(false);
   const [pushDiscovery, setPushDiscovery] = useState(null);
   const [pushResult, setPushResult] = useState(null);
@@ -55,8 +86,8 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => { refresh(); const iv = setInterval(refresh, 30_000); return () => clearInterval(iv); }, [refresh]);
+  useEffect(() => { const iv = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(iv); }, []);
 
-  /* ---- Pull handler ---- */
   const handlePull = async () => {
     setPulling(true);
     setPullResult(null);
@@ -71,16 +102,13 @@ export default function Dashboard() {
     }
   };
 
-  /* ---- Push handler ---- */
   const handlePush = async () => {
     setPushing(true);
     setPushResult(null);
     setPullResult(null);
     try {
-      /* First discover what's pending */
       const discovery = await get('/actions/load');
       setPushDiscovery(discovery);
-
       if (discovery.nothingToPush) {
         setPushResult({ success: true, message: 'Nothing to push. No pending runs found on 0003.', results: [] });
         return;
@@ -89,8 +117,6 @@ export default function Dashboard() {
         setPushResult({ success: true, message: 'All inbox runs are already loaded.', results: [] });
         return;
       }
-
-      /* Actually load */
       const res = await post('/actions/load', {});
       setPushResult(res);
       refresh();
@@ -109,6 +135,9 @@ export default function Dashboard() {
       <Loader2 className="w-6 h-6 text-accent animate-spin" />
     </div>
   );
+
+  const pull = getNextPull(status?.lastRun?.finished, now);
+  const push = getNextPush(now);
 
   const chartData = (status?.recentRuns || []).map(r => ({
     run: r.run_id?.slice(0, 8),
@@ -149,19 +178,34 @@ export default function Dashboard() {
       )}
 
       {/* Pull result panel */}
-      {pullResult && (
-        <PullPanel result={pullResult} onDismiss={dismissPull} />
-      )}
+      {pullResult && <PullPanel result={pullResult} onDismiss={dismissPull} />}
 
       {/* Push result panel */}
       {(pushResult || (pushing && pushDiscovery)) && (
-        <PushPanel
-          discovery={pushDiscovery}
-          result={pushResult}
-          loading={pushing}
-          onDismiss={dismissPush}
-        />
+        <PushPanel discovery={pushDiscovery} result={pushResult} loading={pushing} onDismiss={dismissPush} />
       )}
+
+      {/* Schedule countdown */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <ScheduleCard
+          icon={ArrowDownToLine}
+          label="Next Pull"
+          schedule="Every 8h · :05"
+          next={pull.next}
+          overdue={pull.overdue}
+          countdown={pull.next ? fmtCountdown(pull.next, now) : '—'}
+          sub={pull.next ? fmtCST(pull.next.toISOString()) : 'No previous run'}
+        />
+        <ScheduleCard
+          icon={ArrowUpFromLine}
+          label="Next Push"
+          schedule="Every 1h · :35"
+          next={push.next}
+          overdue={push.overdue}
+          countdown={fmtCountdown(push.next, now)}
+          sub={fmtCST(push.next.toISOString())}
+        />
+      </div>
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -270,6 +314,35 @@ export default function Dashboard() {
   );
 }
 
+/* ---- Schedule countdown card ---- */
+function ScheduleCard({ icon: Icon, label, schedule, next, overdue, countdown, sub }) {
+  return (
+    <div className={`card-sm flex items-center gap-4 ${overdue ? 'border-amber-500/30 bg-amber-500/5' : 'border-surface-4'}`}>
+      <div className={`p-2.5 rounded-lg ${overdue ? 'bg-amber-500/10' : 'bg-surface-3'}`}>
+        <Icon className={`w-5 h-5 ${overdue ? 'text-amber-400' : 'text-zinc-400'}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-zinc-500">{label}</p>
+          <span className="text-[10px] text-zinc-600 font-mono">{schedule}</span>
+        </div>
+        <div className="flex items-baseline gap-2 mt-0.5">
+          <p className={`text-xl font-semibold tabular-nums ${overdue ? 'text-amber-400' : 'text-zinc-100'}`}>
+            {overdue ? 'OVERDUE' : countdown}
+          </p>
+          {overdue && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">
+              waiting for trigger
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-zinc-600 mt-0.5 truncate">{sub}</p>
+      </div>
+      <Timer className={`w-4 h-4 ${overdue ? 'text-amber-500/40' : 'text-zinc-700'}`} />
+    </div>
+  );
+}
+
 /* ---- Pull result panel ---- */
 function PullPanel({ result, onDismiss }) {
   const isVPN = result.status === 'vpn_on';
@@ -293,12 +366,10 @@ function PullPanel({ result, onDismiss }) {
       <button onClick={onDismiss} className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-300">
         <X className="w-4 h-4" />
       </button>
-
       <div className="flex items-start gap-3">
         {isVPN || isError ? <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" /> :
          isReady ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" /> :
          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-zinc-200">
             {isVPN ? 'VPN Detected — Turn Off VPN' :
@@ -307,7 +378,6 @@ function PullPanel({ result, onDismiss }) {
              'Pull Error'}
           </p>
           <p className="text-sm text-zinc-400 mt-1">{result.message}</p>
-
           {result.lastRun && (
             <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500">
               <span>Last: {result.lastRun.run_id?.slice(0, 14)}</span>
@@ -315,7 +385,6 @@ function PullPanel({ result, onDismiss }) {
               <span>{fmtNum(result.lastRun.total_rows)} rows</span>
             </div>
           )}
-
           {!isVPN && !isError && result.pullCommand && (
             <div className="mt-3 p-3 bg-surface-0 rounded-lg border border-surface-4">
               <div className="flex items-center gap-2 mb-1.5">
@@ -330,7 +399,6 @@ function PullPanel({ result, onDismiss }) {
               </div>
             </div>
           )}
-
           {result.pendingRuns?.length > 0 && (
             <p className="text-xs text-zinc-500 mt-2">
               {result.pendingRuns.length} run(s) in inbox waiting to be loaded — use Push after pulling.
@@ -353,19 +421,15 @@ function PushPanel({ discovery, result, loading, onDismiss }) {
       {!loading && <button onClick={onDismiss} className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-300">
         <X className="w-4 h-4" />
       </button>}
-
       <div className="flex items-start gap-3">
         {loading ? <Loader2 className="w-5 h-5 text-accent animate-spin shrink-0 mt-0.5" /> :
          result?.success ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" /> :
          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
-
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-zinc-200">
             {loading ? 'Pushing to PostgreSQL…' : result?.success ? 'Push Complete' : 'Push Failed'}
           </p>
           <p className="text-sm text-zinc-400 mt-1">{result?.message || (loading && discovery ? `Loading ${discovery.pending?.length || 0} pending run(s)…` : 'Discovering pending runs…')}</p>
-
-          {/* Pending runs discovery */}
           {loading && discovery?.pending?.length > 0 && (
             <div className="mt-3 space-y-1.5">
               {discovery.pending.map(r => (
@@ -378,8 +442,6 @@ function PushPanel({ discovery, result, loading, onDismiss }) {
               ))}
             </div>
           )}
-
-          {/* Per-table results */}
           {result?.results?.length > 0 && result.results.map(run => (
             <div key={run.runId} className="mt-3">
               <p className="text-xs font-medium text-zinc-300 mb-1.5 font-mono">{run.runId?.slice(0, 14)}</p>

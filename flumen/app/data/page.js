@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { get } from '@/lib/api';
 import {
-  Database, Table2, Search, ChevronLeft, ChevronRight,
+  Database, Table2, Search, ChevronDown, ChevronRight,
   ArrowUpDown, ArrowUp, ArrowDown, Loader2, Hash, Type, Calendar,
-  ToggleLeft, Binary, Key
+  ToggleLeft, Binary, Key, Pin, PinOff, HardDrive
 } from 'lucide-react';
 import clsx from 'clsx';
+
+const PIN_KEY = 'flumen_pinned_dbs';
 
 function typeIcon(dataType) {
   if (!dataType) return Hash;
@@ -19,66 +21,152 @@ function typeIcon(dataType) {
   return Type;
 }
 
+function fmtBytes(b) {
+  if (!b) return '0 B';
+  const u = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(b) / Math.log(1024)), u.length - 1);
+  return `${(b / 1024 ** i).toFixed(i ? 1 : 0)} ${u[i]}`;
+}
+
+function loadPinned() {
+  try { return JSON.parse(localStorage.getItem(PIN_KEY) || '[]'); } catch { return []; }
+}
+function savePinned(arr) {
+  try { localStorage.setItem(PIN_KEY, JSON.stringify(arr)); } catch {}
+}
+
 export default function DataBrowser() {
-  const [tables, setTables] = useState([]);
+  const [databases, setDatabases] = useState([]);
+  const [schemas, setSchemas] = useState([]);
+  const [expanded, setExpanded] = useState(new Set());
+  const [pinned, setPinned] = useState([]);
   const [selected, setSelected] = useState(null);
   const [schema, setSchema] = useState(null);
-  const [data, setData] = useState(null);
-  const [page, setPage] = useState(1);
+  const [rows, setRows] = useState([]);
+  const [columns, setColumns] = useState([]);
+  const [total, setTotal] = useState(0);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const scrollRef = useRef(null);
+  const LIMIT = 100;
 
   useEffect(() => {
-    get('/tables').then(d => { setTables(d.tables); setLoading(false); }).catch(() => setLoading(false));
+    setPinned(loadPinned());
+    get('/databases').then(d => {
+      setDatabases(d.databases || []);
+      setSchemas(d.schemas || []);
+      /* Auto-expand CampusCE_ADS_DB */
+      setExpanded(new Set([d.currentDb || 'CampusCE_ADS_DB']));
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
+
+  const toggleExpand = (dbName) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(dbName) ? next.delete(dbName) : next.add(dbName);
+      return next;
+    });
+  };
+
+  const togglePin = (dbName) => {
+    setPinned(prev => {
+      const next = prev.includes(dbName) ? prev.filter(d => d !== dbName) : [...prev, dbName];
+      savePinned(next);
+      return next;
+    });
+  };
 
   const loadTable = useCallback(async (name) => {
     setSelected(name);
     setPage(1);
+    setRows([]);
     setSortCol(null);
     setSortDir('asc');
     setDataLoading(true);
     try {
       const [s, d] = await Promise.all([
         get(`/tables/${name}/schema`),
-        get(`/tables/${name}/data?page=1&limit=50`),
+        get(`/tables/${name}/data?page=1&limit=${LIMIT}`),
       ]);
       setSchema(s);
-      setData(d);
+      setColumns(d.columns);
+      setRows(d.rows);
+      setTotal(d.total);
+      setPage(1);
     } finally {
       setDataLoading(false);
     }
   }, []);
 
-  const loadPage = useCallback(async (p, col, dir) => {
-    if (!selected) return;
-    setDataLoading(true);
-    const sortQ = col ? `&sort=${col}&dir=${dir}` : '';
+  /* Infinite scroll — load more rows */
+  const loadMore = useCallback(async () => {
+    if (!selected || loadingMore || rows.length >= total) return;
+    const nextPage = page + 1;
+    setLoadingMore(true);
+    const sortQ = sortCol ? `&sort=${sortCol}&dir=${sortDir}` : '';
     try {
-      const d = await get(`/tables/${selected}/data?page=${p}&limit=50${sortQ}`);
-      setData(d);
-      setPage(p);
+      const d = await get(`/tables/${selected}/data?page=${nextPage}&limit=${LIMIT}${sortQ}`);
+      setRows(prev => [...prev, ...d.rows]);
+      setPage(nextPage);
     } finally {
-      setDataLoading(false);
+      setLoadingMore(false);
     }
-  }, [selected]);
+  }, [selected, page, sortCol, sortDir, loadingMore, rows.length, total]);
 
-  const handleSort = (col) => {
+  /* Scroll handler for infinite scroll */
+  const handleScroll = useCallback((e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    if (scrollHeight - scrollTop - clientHeight < 300) {
+      loadMore();
+    }
+  }, [loadMore]);
+
+  const handleSort = async (col) => {
     const newDir = sortCol === col && sortDir === 'asc' ? 'desc' : 'asc';
     setSortCol(col);
     setSortDir(newDir);
-    loadPage(1, col, newDir);
+    setDataLoading(true);
+    try {
+      const d = await get(`/tables/${selected}/data?page=1&limit=${LIMIT}&sort=${col}&dir=${newDir}`);
+      setRows(d.rows);
+      setTotal(d.total);
+      setPage(1);
+    } finally {
+      setDataLoading(false);
+    }
   };
 
-  const filtered = tables.filter(t => t.table_name.toLowerCase().includes(search.toLowerCase()));
+  /* Group schemas by database */
+  const dbGroups = {};
+  for (const s of schemas) {
+    const key = `${s.table_schema}`;
+    if (!dbGroups[key]) dbGroups[key] = [];
+    dbGroups[key].push(s);
+  }
+
+  /* Sort databases: pinned first, then alphabetical */
+  const sortedDbs = [...databases].sort((a, b) => {
+    const aPinned = pinned.includes(a.name);
+    const bPinned = pinned.includes(b.name);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const filtered = search
+    ? schemas.filter(s => s.table_name.toLowerCase().includes(search.toLowerCase()))
+    : null;
 
   return (
     <div className="flex h-full">
-      {/* Table list sidebar */}
-      <div className="w-64 flex-shrink-0 border-r border-surface-4 flex flex-col bg-surface-1">
+      {/* Database / table list sidebar */}
+      <div className="w-72 flex-shrink-0 border-r border-surface-4 flex flex-col bg-surface-1">
         <div className="p-3 border-b border-surface-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -96,25 +184,98 @@ export default function DataBrowser() {
         <div className="flex-1 overflow-y-auto py-2">
           {loading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-accent animate-spin" /></div>
-          ) : filtered.map(t => (
-            <button
-              key={t.table_name}
-              onClick={() => loadTable(t.table_name)}
-              className={clsx(
-                'w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors',
-                selected === t.table_name
-                  ? 'bg-accent/10 text-accent border-r-2 border-accent'
-                  : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200'
-              )}
-            >
-              <Table2 className="w-4 h-4 shrink-0" />
-              <span className="truncate font-mono text-xs">{t.table_name}</span>
-              <span className="ml-auto text-[10px] text-zinc-600">{parseInt(t.approx_rows || 0).toLocaleString()}</span>
-            </button>
-          ))}
+          ) : search && filtered ? (
+            /* Search results — flat list */
+            filtered.map(t => (
+              <TableButton
+                key={`${t.table_schema}.${t.table_name}`}
+                name={t.table_name}
+                schema={t.table_schema}
+                rows={t.approx_rows}
+                selected={selected === t.table_name}
+                onClick={() => loadTable(t.table_name)}
+              />
+            ))
+          ) : (
+            /* Database tree */
+            sortedDbs.map(db => {
+              const isExpanded = expanded.has(db.name);
+              const isPinned = pinned.includes(db.name);
+              const isCurrentDb = db.name === 'CampusCE_ADS_DB';
+              const tablesInDb = isCurrentDb ? schemas : [];
+
+              return (
+                <div key={db.name}>
+                  <div className="flex items-center group">
+                    <button
+                      onClick={() => toggleExpand(db.name)}
+                      className="flex-1 flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-3 transition-colors"
+                    >
+                      {isExpanded
+                        ? <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        : <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      }
+                      <Database className={clsx('w-4 h-4 shrink-0', isCurrentDb ? 'text-accent' : 'text-zinc-500')} />
+                      <span className={clsx('text-xs font-medium truncate', isCurrentDb ? 'text-accent' : 'text-zinc-300')}>
+                        {db.name}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => togglePin(db.name)}
+                      className={clsx(
+                        'px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity',
+                        isPinned && 'opacity-100'
+                      )}
+                      title={isPinned ? 'Unpin' : 'Pin to top'}
+                    >
+                      {isPinned
+                        ? <PinOff className="w-3 h-3 text-accent" />
+                        : <Pin className="w-3 h-3 text-zinc-500" />
+                      }
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="ml-3">
+                      {isCurrentDb && tablesInDb.length > 0 ? (
+                        /* Group by schema */
+                        Object.entries(dbGroups).map(([schemaName, tables]) => (
+                          <div key={schemaName}>
+                            <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-600 font-medium">
+                              {schemaName}
+                            </div>
+                            {tables.map(t => (
+                              <TableButton
+                                key={t.table_name}
+                                name={t.table_name}
+                                rows={t.approx_rows}
+                                size={t.size_bytes}
+                                selected={selected === t.table_name}
+                                onClick={() => loadTable(t.table_name)}
+                              />
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-6 py-3 text-xs text-zinc-600">
+                          {isCurrentDb ? 'No tables' : (
+                            <span className="flex items-center gap-1.5">
+                              <HardDrive className="w-3 h-3" />
+                              {fmtBytes(parseInt(db.size_bytes || 0))}
+                              {db.table_count > 0 && ` · ${db.table_count} tables`}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
         <div className="px-4 py-3 border-t border-surface-4 text-xs text-zinc-500">
-          {tables.length} tables in <span className="font-mono text-zinc-400">dbo</span>
+          {databases.length} databases · {schemas.length} tables
         </div>
       </div>
 
@@ -134,7 +295,8 @@ export default function DataBrowser() {
               <div>
                 <h2 className="text-lg font-semibold text-zinc-100 font-mono">{selected}</h2>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-zinc-500">{data?.total?.toLocaleString()} rows</span>
+                  <span className="text-xs text-zinc-500">{total.toLocaleString()} rows</span>
+                  <span className="text-xs text-zinc-600">{rows.length.toLocaleString()} loaded</span>
                   {schema?.primaryKey?.length > 0 && (
                     <span className="badge-info">
                       <Key className="w-3 h-3" />
@@ -143,39 +305,24 @@ export default function DataBrowser() {
                   )}
                 </div>
               </div>
-              {data && (
-                <div className="ml-auto flex items-center gap-2 text-sm text-zinc-400">
-                  <button
-                    onClick={() => loadPage(page - 1, sortCol, sortDir)}
-                    disabled={page <= 1}
-                    className="btn-ghost p-1.5 disabled:opacity-30"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="tabular-nums text-xs">{page} / {data.pages || 1}</span>
-                  <button
-                    onClick={() => loadPage(page + 1, sortCol, sortDir)}
-                    disabled={page >= (data.pages || 1)}
-                    className="btn-ghost p-1.5 disabled:opacity-30"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Data table */}
-            <div className="flex-1 overflow-auto relative">
+            {/* Data table — infinite scroll */}
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-auto relative"
+              onScroll={handleScroll}
+            >
               {dataLoading && (
                 <div className="absolute inset-0 bg-surface-0/60 flex items-center justify-center z-10">
                   <Loader2 className="w-6 h-6 text-accent animate-spin" />
                 </div>
               )}
-              {data && (
+              {columns.length > 0 && (
                 <table className="w-full">
                   <thead className="sticky top-0 z-[5]">
                     <tr>
-                      {data.columns.map(col => {
+                      {columns.map(col => {
                         const schemaCol = schema?.columns?.find(c => c.column_name === col);
                         const TIcon = typeIcon(schemaCol?.data_type);
                         const isSort = sortCol === col;
@@ -187,7 +334,7 @@ export default function DataBrowser() {
                               {isSort ? (
                                 sortDir === 'asc' ? <ArrowUp className="w-3 h-3 text-accent" /> : <ArrowDown className="w-3 h-3 text-accent" />
                               ) : (
-                                <ArrowUpDown className="w-3 h-3 opacity-0 group-hover:opacity-30" />
+                                <ArrowUpDown className="w-3 h-3 opacity-20" />
                               )}
                             </span>
                           </th>
@@ -196,9 +343,9 @@ export default function DataBrowser() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.rows.map((row, i) => (
+                    {rows.map((row, i) => (
                       <tr key={i} className="hover:bg-surface-3/40 transition-colors">
-                        {data.columns.map(col => (
+                        {columns.map(col => (
                           <td key={col} className="table-cell" title={row[col]?.toString()}>
                             {row[col] === null ? <span className="text-zinc-600 italic">null</span> : String(row[col])}
                           </td>
@@ -208,10 +355,45 @@ export default function DataBrowser() {
                   </tbody>
                 </table>
               )}
+
+              {/* Infinite scroll loader */}
+              {loadingMore && (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-5 h-5 text-accent animate-spin" />
+                </div>
+              )}
+              {rows.length > 0 && rows.length >= total && (
+                <div className="text-center py-3 text-xs text-zinc-600">
+                  All {total.toLocaleString()} rows loaded
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
     </div>
+  );
+}
+
+function TableButton({ name, schema, rows, size, selected, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        'w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors',
+        selected
+          ? 'bg-accent/10 text-accent border-r-2 border-accent'
+          : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200'
+      )}
+    >
+      <Table2 className="w-3.5 h-3.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <span className="truncate font-mono text-xs block">{name}</span>
+        {schema && <span className="text-[9px] text-zinc-600">{schema}</span>}
+      </div>
+      <span className="ml-auto text-[10px] text-zinc-600 shrink-0">
+        {size ? fmtBytes(parseInt(size)) : parseInt(rows || 0).toLocaleString()}
+      </span>
+    </button>
   );
 }

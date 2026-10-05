@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Database, GitBranch, ArrowLeftRight, Activity, Droplets } from 'lucide-react';
+import { LayoutDashboard, Database, GitBranch, ArrowLeftRight, Activity, Droplets, TerminalSquare } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV = [
   { href: '/',            label: 'Dashboard',  icon: LayoutDashboard },
   { href: '/data',        label: 'Data',       icon: Database },
+  { href: '/query',       label: 'Query',      icon: TerminalSquare },
   { href: '/topology',    label: 'Topology',   icon: GitBranch },
   { href: '/comparison',  label: 'Comparison', icon: ArrowLeftRight },
   { href: '/activity',    label: 'Activity',   icon: Activity },
