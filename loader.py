@@ -23,7 +23,7 @@ import time
 import psycopg2
 
 RUN_DIR = sys.argv[1]
-RUN_ID = os.path.basename(RUN_DIR.rstrip('/'))
+RUN_ID = os.environ.get('RUN_ID') or os.path.basename(RUN_DIR.rstrip('/'))
 TARGET_SCHEMA = 'dbo'
 
 

@@ -78,7 +78,7 @@ foreach ($run in $pending) {
         Log '  uploaded'
     } else { Log '  already uploaded' }
 
-    $dockerCmd = "docker run --rm --network host --env-file $base/secrets/pg.env " +
+    $dockerCmd = "docker run --rm --network host --env-file $base/secrets/pg.env -e RUN_ID=$id " +
                  "-v $base/inbox/${id}:/run_data:ro -v $base/repo/loader.py:/app/loader.py:ro " +
                  "campusce-etl:latest python /app/loader.py /run_data"
     $out = Invoke-Remote $dockerCmd
