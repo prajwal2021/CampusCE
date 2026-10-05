@@ -20,7 +20,8 @@ param(
     [int]$MaxRetries   = 5,
     [string[]]$OnlyTables,                       # optional: restrict to these tables (testing)
     [string[]]$OnceTables = @('BB_CCFC_UniqueUsers_20220523'),   # pulled a single time, never re-synced
-    [int]$MaxBatchesPerTable = 0                 # 0 = unlimited; >0 only for smoke tests
+    [int]$MaxBatchesPerTable = 0,                # 0 = unlimited; >0 only for smoke tests
+    [double]$MinHours  = 0                       # >0: skip unless this long has passed since the last finished run (used by the scheduler)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -101,8 +102,26 @@ function Format-Field($v) {
     return '"' + ([string]$v).Replace([string][char]0, '').Replace('"', '""') + '"'
 }
 
-# ---- choose / resume run ----
+# ---- is a run due? (an unfinished run always is; otherwise wait MinHours after the last finished run) ----
 $runsDir = Join-Path $StageRoot 'runs'
+if ($MinHours -gt 0) {
+    $unfinished = Get-ChildItem $runsDir -Directory -ErrorAction SilentlyContinue |
+                  Where-Object { -not (Test-Path (Join-Path $_.FullName 'DONE')) }
+    $lastDone = Get-ChildItem $runsDir -Directory -ErrorAction SilentlyContinue |
+                Where-Object { Test-Path (Join-Path $_.FullName 'DONE') } |
+                ForEach-Object { (Get-Item (Join-Path $_.FullName 'DONE')).LastWriteTime } | Sort-Object | Select-Object -Last 1
+    if (-not $unfinished -and $lastDone -and ((Get-Date) - $lastDone).TotalHours -lt $MinHours) {
+        $lock.Dispose(); exit 0     # not due yet; stay quiet so hourly scheduling doesn't spam the log
+    }
+}
+# quick reachability probe so being on the VPN doesn't cost minutes of retries
+$tcp = New-Object System.Net.Sockets.TcpClient
+$reach = $false
+try { $reach = $tcp.ConnectAsync($Server, 1433).Wait(5000) } catch {}
+$tcp.Close()
+if (-not $reach) { Log 'ADS not reachable right now (VPN on?); will try again next time.'; $lock.Dispose(); exit 2 }
+
+# ---- choose / resume run ----
 $runDir = Get-ChildItem $runsDir -Directory -ErrorAction SilentlyContinue |
           Where-Object { -not (Test-Path (Join-Path $_.FullName 'DONE')) } |
           Sort-Object Name | Select-Object -Last 1
