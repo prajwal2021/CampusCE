@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { get, post } from '@/lib/api';
 import {
   Clock, Database, HardDrive, ArrowDownToLine, ArrowUpFromLine,
-  RefreshCw, CheckCircle2, AlertCircle, Loader2, Server
+  RefreshCw, CheckCircle2, AlertCircle, Loader2, Server, X,
+  AlertTriangle, Terminal, Copy, Package, Table2
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -31,9 +32,15 @@ export default function Dashboard() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  /* Pull state */
   const [pulling, setPulling] = useState(false);
+  const [pullResult, setPullResult] = useState(null);
+
+  /* Push state */
   const [pushing, setPushing] = useState(false);
-  const [actionMsg, setActionMsg] = useState(null);
+  const [pushDiscovery, setPushDiscovery] = useState(null);
+  const [pushResult, setPushResult] = useState(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -49,30 +56,53 @@ export default function Dashboard() {
 
   useEffect(() => { refresh(); const iv = setInterval(refresh, 30_000); return () => clearInterval(iv); }, [refresh]);
 
+  /* ---- Pull handler ---- */
   const handlePull = async () => {
     setPulling(true);
-    setActionMsg(null);
+    setPullResult(null);
+    setPushResult(null);
     try {
-      setActionMsg({ type: 'info', text: 'Pull must be triggered from the laptop (pull.ps1). Use Task Scheduler or run manually.' });
+      const res = await post('/actions/pull', {});
+      setPullResult(res);
+    } catch (e) {
+      setPullResult({ status: 'error', message: e.message });
     } finally {
       setPulling(false);
     }
   };
+
+  /* ---- Push handler ---- */
   const handlePush = async () => {
     setPushing(true);
-    setActionMsg(null);
+    setPushResult(null);
+    setPullResult(null);
     try {
-      const lastRun = status?.lastRun?.run_id;
-      if (!lastRun) throw new Error('No run available to push');
-      const res = await post('/actions/load', { runId: lastRun });
-      setActionMsg({ type: res.success ? 'ok' : 'err', text: res.success ? `Run ${lastRun} loaded successfully` : `Load failed (exit ${res.exitCode})` });
+      /* First discover what's pending */
+      const discovery = await get('/actions/load');
+      setPushDiscovery(discovery);
+
+      if (discovery.nothingToPush) {
+        setPushResult({ success: true, message: 'Nothing to push. No pending runs found on 0003.', results: [] });
+        return;
+      }
+      if (discovery.pending.length === 0) {
+        setPushResult({ success: true, message: 'All inbox runs are already loaded.', results: [] });
+        return;
+      }
+
+      /* Actually load */
+      const res = await post('/actions/load', {});
+      setPushResult(res);
       refresh();
     } catch (e) {
-      setActionMsg({ type: 'err', text: e.message });
+      setPushResult({ success: false, message: e.message, results: [] });
     } finally {
       setPushing(false);
     }
   };
+
+  const dismissPull = () => setPullResult(null);
+  const dismissPush = () => { setPushResult(null); setPushDiscovery(null); };
 
   if (loading) return (
     <div className="flex items-center justify-center h-full">
@@ -110,24 +140,27 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Alert */}
+      {/* Connection error */}
       {error && (
         <div className="card-sm flex items-center gap-3 border-red-500/30 bg-red-500/5">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
           <span className="text-sm text-red-300">{error}</span>
         </div>
       )}
-      {actionMsg && (
-        <div className={`card-sm flex items-center gap-3 ${
-          actionMsg.type === 'ok' ? 'border-emerald-500/30 bg-emerald-500/5' :
-          actionMsg.type === 'err' ? 'border-red-500/30 bg-red-500/5' :
-          'border-accent/30 bg-accent/5'
-        }`}>
-          {actionMsg.type === 'ok' ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" /> :
-           actionMsg.type === 'err' ? <AlertCircle className="w-5 h-5 text-red-400 shrink-0" /> :
-           <RefreshCw className="w-5 h-5 text-accent shrink-0" />}
-          <span className="text-sm">{actionMsg.text}</span>
-        </div>
+
+      {/* Pull result panel */}
+      {pullResult && (
+        <PullPanel result={pullResult} onDismiss={dismissPull} />
+      )}
+
+      {/* Push result panel */}
+      {(pushResult || (pushing && pushDiscovery)) && (
+        <PushPanel
+          discovery={pushDiscovery}
+          result={pushResult}
+          loading={pushing}
+          onDismiss={dismissPush}
+        />
       )}
 
       {/* Metric cards */}
@@ -231,6 +264,144 @@ export default function Dashboard() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Pull result panel ---- */
+function PullPanel({ result, onDismiss }) {
+  const isVPN = result.status === 'vpn_on';
+  const isReady = result.status === 'ready';
+  const isRecent = result.status === 'recent';
+  const isError = result.status === 'error';
+  const [copied, setCopied] = useState(false);
+
+  const borderColor = isVPN || isError ? 'border-red-500/30' : isReady ? 'border-emerald-500/30' : 'border-amber-500/30';
+  const bgColor = isVPN || isError ? 'bg-red-500/5' : isReady ? 'bg-emerald-500/5' : 'bg-amber-500/5';
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(result.pullCommand || '').then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className={`card ${borderColor} ${bgColor} relative`}>
+      <button onClick={onDismiss} className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-300">
+        <X className="w-4 h-4" />
+      </button>
+
+      <div className="flex items-start gap-3">
+        {isVPN || isError ? <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" /> :
+         isReady ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" /> :
+         <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-zinc-200">
+            {isVPN ? 'VPN Detected — Turn Off VPN' :
+             isReady ? 'Ready to Pull' :
+             isRecent ? 'Recent Sync' :
+             'Pull Error'}
+          </p>
+          <p className="text-sm text-zinc-400 mt-1">{result.message}</p>
+
+          {result.lastRun && (
+            <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500">
+              <span>Last: {result.lastRun.run_id?.slice(0, 14)}</span>
+              <span>{fmtCST(result.lastRun.finished)}</span>
+              <span>{fmtNum(result.lastRun.total_rows)} rows</span>
+            </div>
+          )}
+
+          {!isVPN && !isError && result.pullCommand && (
+            <div className="mt-3 p-3 bg-surface-0 rounded-lg border border-surface-4">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Terminal className="w-3.5 h-3.5 text-zinc-500" />
+                <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Run in PowerShell</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs font-mono text-accent break-all">{result.pullCommand}</code>
+                <button onClick={handleCopy} className="btn-ghost p-1.5 shrink-0" title="Copy command">
+                  {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {result.pendingRuns?.length > 0 && (
+            <p className="text-xs text-zinc-500 mt-2">
+              {result.pendingRuns.length} run(s) in inbox waiting to be loaded — use Push after pulling.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Push result panel ---- */
+function PushPanel({ discovery, result, loading, onDismiss }) {
+  return (
+    <div className={`card relative ${
+      result?.success === false ? 'border-red-500/30 bg-red-500/5' :
+      result?.success ? 'border-emerald-500/30 bg-emerald-500/5' :
+      'border-accent/30 bg-accent/5'
+    }`}>
+      {!loading && <button onClick={onDismiss} className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-300">
+        <X className="w-4 h-4" />
+      </button>}
+
+      <div className="flex items-start gap-3">
+        {loading ? <Loader2 className="w-5 h-5 text-accent animate-spin shrink-0 mt-0.5" /> :
+         result?.success ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" /> :
+         <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-zinc-200">
+            {loading ? 'Pushing to PostgreSQL…' : result?.success ? 'Push Complete' : 'Push Failed'}
+          </p>
+          <p className="text-sm text-zinc-400 mt-1">{result?.message || (loading && discovery ? `Loading ${discovery.pending?.length || 0} pending run(s)…` : 'Discovering pending runs…')}</p>
+
+          {/* Pending runs discovery */}
+          {loading && discovery?.pending?.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {discovery.pending.map(r => (
+                <div key={r.runId} className="flex items-center gap-2 text-xs text-zinc-400">
+                  <Package className="w-3.5 h-3.5 text-accent" />
+                  <span className="font-mono">{r.runId?.slice(0, 14)}</span>
+                  <span>— {r.tables} tables, {fmtNum(r.totalRows)} rows</span>
+                  <Loader2 className="w-3 h-3 animate-spin text-accent ml-auto" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Per-table results */}
+          {result?.results?.length > 0 && result.results.map(run => (
+            <div key={run.runId} className="mt-3">
+              <p className="text-xs font-medium text-zinc-300 mb-1.5 font-mono">{run.runId?.slice(0, 14)}</p>
+              {run.tableResults?.length > 0 && (
+                <div className="space-y-1">
+                  {run.tableResults.map(t => (
+                    <div key={t.table} className="flex items-center gap-2 text-xs">
+                      <Table2 className="w-3 h-3 text-zinc-500" />
+                      <span className="font-mono text-zinc-300 w-44 truncate">{t.table}</span>
+                      {t.status === 'loaded' && (
+                        <span className="text-emerald-400">
+                          {fmtNum(t.rows)} rows · {t.changed > 0 ? `${fmtNum(t.changed)} changed` : 'no changes'}{t.deleted > 0 ? ` · ${fmtNum(t.deleted)} deleted` : ''}
+                        </span>
+                      )}
+                      {t.status === 'skipped' && <span className="text-zinc-500">already loaded</span>}
+                      {t.status === 'failed' && <span className="text-red-400">{t.error}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
