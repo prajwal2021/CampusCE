@@ -54,9 +54,11 @@ if ($global:remoteExit -ne 0 -or ($probe -join '') -notmatch 'ok') {
 }
 
 $base = '~/campusce_pipeline'
-[void](Invoke-Remote "mkdir -p $base/inbox $base/loader")
-& scp @sshOpts (Join-Path $PSScriptRoot 'loader.py') "${Remote}:campusce_pipeline/loader/loader.py" 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) { Log 'Could not upload loader.py'; $lock.Dispose(); exit 1 }
+[void](Invoke-Remote "mkdir -p $base/inbox")
+# the server keeps its own clone of the GitHub repo; update it so loader.py is current
+$pullOut = Invoke-Remote "git -C $base/repo pull --ff-only"
+if ($global:remoteExit -ne 0) { Log "git pull on 0003 failed: $($pullOut -join ' ')"; $lock.Dispose(); exit 1 }
+Log "Server repo: $(($pullOut | Select-Object -Last 1))"
 
 $failed = $false
 foreach ($run in $pending) {
@@ -73,7 +75,7 @@ foreach ($run in $pending) {
     } else { Log '  already uploaded' }
 
     $dockerCmd = "docker run --rm --network host --env-file $base/secrets/pg.env " +
-                 "-v $base/inbox/${id}:/run_data:ro -v $base/loader/loader.py:/app/loader.py:ro " +
+                 "-v $base/inbox/${id}:/run_data:ro -v $base/repo/loader.py:/app/loader.py:ro " +
                  "campusce-etl:latest python /app/loader.py /run_data"
     $out = Invoke-Remote $dockerCmd
     $loadExit = $global:remoteExit
