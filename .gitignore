@@ -1,0 +1,10 @@
+# local data and runtime files, never commit these
+staging/
+*.lock
+*.log
+
+# credentials
+*.keytab
+*.env
+.env*
+secrets/
