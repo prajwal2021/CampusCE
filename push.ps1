@@ -13,7 +13,7 @@
 param(
     [string]$Remote    = 'prajsrin@tosmonline0003.ttu.edu',
     [string]$KeyPath   = (Join-Path $env:USERPROFILE '.ssh\id_ed25519_ttu'),
-    [string]$StageRoot = (Join-Path $PSScriptRoot 'staging'),
+    [string]$StageRoot = (Join-Path $(if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }) 'staging'),
     [int]$KeepRuns     = 3
 )
 

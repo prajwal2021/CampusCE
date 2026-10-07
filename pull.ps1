@@ -14,7 +14,7 @@
 param(
     [string]$Server    = 'appdata.ads.ttu.edu',
     [string]$Database  = 'ELEARNING_CampusCE',
-    [string]$StageRoot = (Join-Path $PSScriptRoot 'staging'),
+    [string]$StageRoot = (Join-Path $(if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }) 'staging'),
     [int]$BatchSize    = 20000,
     [int]$PauseMs      = 1500,
     [int]$MaxRetries   = 5,
