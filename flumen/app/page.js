@@ -110,7 +110,7 @@ export default function Dashboard() {
       const discovery = await get('/actions/load');
       setPushDiscovery(discovery);
       if (discovery.nothingToPush) {
-        setPushResult({ success: true, message: 'Nothing to push. No pending runs found on 0003.', results: [] });
+        setPushResult({ success: true, message: 'Nothing waiting in the inbox on 0003. If you just pulled, the laptop has not uploaded it yet: run .\\push.ps1 on the laptop (VPN on), or wait for the :35 scheduled push.', results: [] });
         return;
       }
       if (discovery.pending.length === 0) {
