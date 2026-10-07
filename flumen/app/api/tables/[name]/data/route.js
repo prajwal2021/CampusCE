@@ -1,52 +1,52 @@
 import { NextResponse } from 'next/server';
-import { q } from '@/lib/db';
+import { qdb, DEFAULT_DB } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+
+const ident = s => '"' + String(s).replace(/"/g, '""') + '"';
 
 export async function GET(request, { params }) {
   try {
     const { name } = params;
     const { searchParams } = new URL(request.url);
+    const db = searchParams.get('db') || DEFAULT_DB;
+    const schema = searchParams.get('schema') || 'dbo';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const limit = Math.min(200, Math.max(1, parseInt(searchParams.get('limit') || '50')));
     const sortCol = searchParams.get('sort') || null;
     const sortDir = searchParams.get('dir') === 'desc' ? 'DESC' : 'ASC';
     const offset = (page - 1) * limit;
 
-    // Validate table exists
-    const check = await q(
-      `SELECT 1 FROM information_schema.tables WHERE table_schema = 'dbo' AND table_name = $1`,
-      [name]
+    // Column list doubles as the existence check and the sort whitelist
+    const colRes = await qdb(db,
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = $1 AND table_name = $2 ORDER BY ordinal_position`,
+      [schema, name]
     );
-    if (check.rows.length === 0) {
+    if (colRes.rows.length === 0) {
       return NextResponse.json({ error: 'Table not found' }, { status: 404 });
     }
-
-    // Get columns to validate sort
-    const colRes = await q(
-      `SELECT column_name FROM information_schema.columns
-       WHERE table_schema = 'dbo' AND table_name = $1 ORDER BY ordinal_position`,
-      [name]
-    );
     const validCols = colRes.rows.map(r => r.column_name);
 
+    const target = `${ident(schema)}.${ident(name)}`;
     const orderBy = sortCol && validCols.includes(sortCol)
-      ? `ORDER BY "${sortCol}" ${sortDir} NULLS LAST`
+      ? `ORDER BY ${ident(sortCol)} ${sortDir} NULLS LAST`
       : '';
 
     const [dataRes, countRes] = await Promise.all([
-      q(`SELECT * FROM dbo."${name}" ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]),
-      q(`SELECT count(*) AS total FROM dbo."${name}"`),
+      qdb(db, `SELECT * FROM ${target} ${orderBy} LIMIT $1 OFFSET $2`, [limit, offset]),
+      qdb(db, `SELECT count(*) AS total FROM ${target}`),
     ]);
+    const total = parseInt(countRes.rows[0].total);
 
     return NextResponse.json({
       table: name,
       columns: validCols,
       rows: dataRes.rows,
-      total: parseInt(countRes.rows[0].total),
+      total,
       page,
       limit,
-      pages: Math.ceil(parseInt(countRes.rows[0].total) / limit),
+      pages: Math.ceil(total / limit),
     });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });

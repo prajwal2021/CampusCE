@@ -1,39 +1,55 @@
 import { NextResponse } from 'next/server';
-import { q } from '@/lib/db';
+import { q, qdb, DEFAULT_DB } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+const TABLES_SQL = `
+  SELECT n.nspname AS table_schema, c.relname AS table_name,
+         pg_total_relation_size(c.oid) AS size_bytes,
+         c.reltuples::bigint AS approx_rows
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relkind IN ('r', 'p')
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+    AND n.nspname NOT LIKE 'pg_toast%'
+  ORDER BY n.nspname, c.relname
+`;
+
 /**
- * GET /api/databases
- * List all databases on the 0003 PostgreSQL server, with size and table count.
+ * GET /api/databases            -> all databases on the 0003 server (+ tables of the pipeline DB)
+ * GET /api/databases?db=<name>  -> tables of that database
  */
-export async function GET() {
+export async function GET(request) {
   try {
+    const db = new URL(request.url).searchParams.get('db');
+
+    if (db) {
+      const known = await q(`SELECT 1 FROM pg_database WHERE datname = $1 AND NOT datistemplate`, [db]);
+      if (known.rows.length === 0) return NextResponse.json({ error: 'Database not found' }, { status: 404 });
+      try {
+        const res = await qdb(db, TABLES_SQL);
+        return NextResponse.json({ db, tables: res.rows });
+      } catch (err) {
+        return NextResponse.json({ db, tables: [], error: err.message });
+      }
+    }
+
     const dbRes = await q(`
       SELECT d.datname AS name,
              pg_database_size(d.datname) AS size_bytes,
-             (SELECT count(*) FROM information_schema.tables t
-              WHERE t.table_catalog = d.datname AND t.table_type = 'BASE TABLE') AS table_count
+             has_database_privilege(d.datname, 'CONNECT') AS can_connect
       FROM pg_database d
       WHERE d.datistemplate = false
       ORDER BY d.datname
     `);
-
-    /* For the current database (CampusCE_ADS_DB), also get schemas and their tables */
-    const schemaRes = await q(`
-      SELECT table_schema, table_name,
-             pg_total_relation_size(quote_ident(table_schema) || '.' || quote_ident(table_name)) AS size_bytes,
-             (SELECT reltuples::bigint FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-              WHERE n.nspname = t.table_schema AND c.relname = t.table_name) AS approx_rows
-      FROM information_schema.tables t
-      WHERE t.table_type = 'BASE TABLE'
-        AND t.table_schema NOT IN ('pg_catalog', 'information_schema')
-      ORDER BY t.table_schema, t.table_name
-    `);
+    const schemaRes = await q(TABLES_SQL);
 
     return NextResponse.json({
-      databases: dbRes.rows,
-      currentDb: 'CampusCE_ADS_DB',
+      databases: dbRes.rows.map(d => ({
+        ...d,
+        table_count: d.name === DEFAULT_DB ? schemaRes.rows.length : null,
+      })),
+      currentDb: DEFAULT_DB,
       schemas: schemaRes.rows,
     });
   } catch (err) {

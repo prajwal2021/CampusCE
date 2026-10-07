@@ -59,7 +59,7 @@ function createTunnel() {
           connectionTimeoutMillis: 10_000,
         });
         console.log(`[flumen] SSH tunnel up → 127.0.0.1:${localPort} → ${SSH_HOST}:${PG_REMOTE_PORT}`);
-        resolve({ pool, ssh, localServer });
+        resolve({ pool, ssh, localServer, localPort, pools: new Map([[PG_DB, pool]]) });
       });
     });
 
@@ -110,6 +110,25 @@ async function q(text, params = []) {
 }
 
 /**
+ * Run a query against any database on the 0003 server (pools are cached per database
+ * and discarded together with the tunnel when it reconnects).
+ */
+async function qdb(dbName, text, params = []) {
+  if (!dbName || dbName === PG_DB) return q(text, params);
+  const t = await createTunnel();
+  let pool = t.pools.get(dbName);
+  if (!pool) {
+    pool = new Pool({
+      host: '127.0.0.1', port: t.localPort, user: PG_USER, password: PG_PASS, database: dbName,
+      max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000,
+    });
+    pool.on('error', () => {});
+    t.pools.set(dbName, pool);
+  }
+  return pool.query(text, params);
+}
+
+/**
  * Run a command on 0003 over the SSH connection.
  */
 async function sshExec(command) {
@@ -125,4 +144,4 @@ async function sshExec(command) {
   });
 }
 
-module.exports = { getPool, q, sshExec };
+module.exports = { getPool, q, qdb, sshExec, DEFAULT_DB: PG_DB };

@@ -38,9 +38,12 @@ function savePinned(arr) {
 export default function DataBrowser() {
   const [databases, setDatabases] = useState([]);
   const [schemas, setSchemas] = useState([]);
+  const [currentDb, setCurrentDb] = useState('CampusCE_ADS_DB');
+  const [dbTables, setDbTables] = useState({});
   const [expanded, setExpanded] = useState(new Set());
   const [pinned, setPinned] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [tableError, setTableError] = useState(null);
   const [schema, setSchema] = useState(null);
   const [rows, setRows] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -60,18 +63,35 @@ export default function DataBrowser() {
     get('/databases').then(d => {
       setDatabases(d.databases || []);
       setSchemas(d.schemas || []);
-      /* Auto-expand CampusCE_ADS_DB */
-      setExpanded(new Set([d.currentDb || 'CampusCE_ADS_DB']));
+      const cur = d.currentDb || 'CampusCE_ADS_DB';
+      setCurrentDb(cur);
+      setDbTables({ [cur]: { status: 'ready', tables: d.schemas || [] } });
+      setExpanded(new Set([cur]));
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
+  const fetchDbTables = useCallback(async (dbName) => {
+    setDbTables(prev => ({ ...prev, [dbName]: { status: 'loading', tables: [] } }));
+    try {
+      const d = await get(`/databases?db=${encodeURIComponent(dbName)}`);
+      setDbTables(prev => ({
+        ...prev,
+        [dbName]: d.error ? { status: 'error', tables: [], error: d.error } : { status: 'ready', tables: d.tables || [] },
+      }));
+    } catch (e) {
+      setDbTables(prev => ({ ...prev, [dbName]: { status: 'error', tables: [], error: e.message } }));
+    }
+  }, []);
+
   const toggleExpand = (dbName) => {
+    const opening = !expanded.has(dbName);
     setExpanded(prev => {
       const next = new Set(prev);
       next.has(dbName) ? next.delete(dbName) : next.add(dbName);
       return next;
     });
+    if (opening && !dbTables[dbName]) fetchDbTables(dbName);
   };
 
   const togglePin = (dbName) => {
@@ -82,23 +102,34 @@ export default function DataBrowser() {
     });
   };
 
-  const loadTable = useCallback(async (name) => {
-    setSelected(name);
+  const tableUrl = (t, kind, extra = '') =>
+    `/tables/${encodeURIComponent(t.name)}/${kind}?db=${encodeURIComponent(t.db)}&schema=${encodeURIComponent(t.schema)}${extra}`;
+
+  const loadTable = useCallback(async (db, schemaName, name) => {
+    const t = { db, schema: schemaName, name };
+    setSelected(t);
     setPage(1);
     setRows([]);
+    setColumns([]);
+    setTotal(0);
+    setSchema(null);
+    setTableError(null);
     setSortCol(null);
     setSortDir('asc');
     setDataLoading(true);
     try {
       const [s, d] = await Promise.all([
-        get(`/tables/${name}/schema`),
-        get(`/tables/${name}/data?page=1&limit=${LIMIT}`),
+        get(tableUrl(t, 'schema')),
+        get(tableUrl(t, 'data', `&page=1&limit=${LIMIT}`)),
       ]);
+      if (d.error) throw new Error(d.error);
       setSchema(s);
       setColumns(d.columns);
       setRows(d.rows);
       setTotal(d.total);
       setPage(1);
+    } catch (e) {
+      setTableError(e.message);
     } finally {
       setDataLoading(false);
     }
@@ -111,7 +142,7 @@ export default function DataBrowser() {
     setLoadingMore(true);
     const sortQ = sortCol ? `&sort=${sortCol}&dir=${sortDir}` : '';
     try {
-      const d = await get(`/tables/${selected}/data?page=${nextPage}&limit=${LIMIT}${sortQ}`);
+      const d = await get(tableUrl(selected, 'data', `&page=${nextPage}&limit=${LIMIT}${sortQ}`));
       setRows(prev => [...prev, ...d.rows]);
       setPage(nextPage);
     } finally {
@@ -133,7 +164,7 @@ export default function DataBrowser() {
     setSortDir(newDir);
     setDataLoading(true);
     try {
-      const d = await get(`/tables/${selected}/data?page=1&limit=${LIMIT}&sort=${col}&dir=${newDir}`);
+      const d = await get(tableUrl(selected, 'data', `&page=1&limit=${LIMIT}&sort=${encodeURIComponent(col)}&dir=${newDir}`));
       setRows(d.rows);
       setTotal(d.total);
       setPage(1);
@@ -142,13 +173,13 @@ export default function DataBrowser() {
     }
   };
 
-  /* Group schemas by database */
-  const dbGroups = {};
-  for (const s of schemas) {
-    const key = `${s.table_schema}`;
-    if (!dbGroups[key]) dbGroups[key] = [];
-    dbGroups[key].push(s);
-  }
+  const groupBySchema = (tables) => {
+    const g = {};
+    for (const s of tables) (g[s.table_schema] ||= []).push(s);
+    return g;
+  };
+  const isSelected = (db, sch, name) =>
+    selected && selected.db === db && selected.schema === sch && selected.name === name;
 
   /* Sort databases: pinned first, then alphabetical */
   const sortedDbs = [...databases].sort((a, b) => {
@@ -160,7 +191,10 @@ export default function DataBrowser() {
   });
 
   const filtered = search
-    ? schemas.filter(s => s.table_name.toLowerCase().includes(search.toLowerCase()))
+    ? Object.entries(dbTables).flatMap(([db, v]) =>
+        v.tables
+          .filter(s => s.table_name.toLowerCase().includes(search.toLowerCase()))
+          .map(s => ({ ...s, db })))
     : null;
 
   return (
@@ -188,12 +222,12 @@ export default function DataBrowser() {
             /* Search results — flat list */
             filtered.map(t => (
               <TableButton
-                key={`${t.table_schema}.${t.table_name}`}
+                key={`${t.db}.${t.table_schema}.${t.table_name}`}
                 name={t.table_name}
-                schema={t.table_schema}
+                schema={`${t.db} · ${t.table_schema}`}
                 rows={t.approx_rows}
-                selected={selected === t.table_name}
-                onClick={() => loadTable(t.table_name)}
+                selected={isSelected(t.db, t.table_schema, t.table_name)}
+                onClick={() => loadTable(t.db, t.table_schema, t.table_name)}
               />
             ))
           ) : (
@@ -201,8 +235,8 @@ export default function DataBrowser() {
             sortedDbs.map(db => {
               const isExpanded = expanded.has(db.name);
               const isPinned = pinned.includes(db.name);
-              const isCurrentDb = db.name === 'CampusCE_ADS_DB';
-              const tablesInDb = isCurrentDb ? schemas : [];
+              const isCurrentDb = db.name === currentDb;
+              const entry = dbTables[db.name];
 
               return (
                 <div key={db.name}>
@@ -237,9 +271,22 @@ export default function DataBrowser() {
 
                   {isExpanded && (
                     <div className="ml-3">
-                      {isCurrentDb && tablesInDb.length > 0 ? (
-                        /* Group by schema */
-                        Object.entries(dbGroups).map(([schemaName, tables]) => (
+                      {!entry || entry.status === 'loading' ? (
+                        <div className="px-6 py-3 text-xs text-zinc-500 flex items-center gap-2">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Loading tables…
+                        </div>
+                      ) : entry.status === 'error' ? (
+                        <div className="px-6 py-3 text-xs text-red-400 space-y-1">
+                          <p>Cannot open this database: {entry.error}</p>
+                          <button onClick={() => fetchDbTables(db.name)} className="text-accent hover:underline">Retry</button>
+                        </div>
+                      ) : entry.tables.length === 0 ? (
+                        <div className="px-6 py-3 text-xs text-zinc-600 flex items-center gap-1.5">
+                          <HardDrive className="w-3 h-3" />
+                          No tables · {fmtBytes(parseInt(db.size_bytes || 0))}
+                        </div>
+                      ) : (
+                        Object.entries(groupBySchema(entry.tables)).map(([schemaName, tables]) => (
                           <div key={schemaName}>
                             <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-600 font-medium">
                               {schemaName}
@@ -250,22 +297,12 @@ export default function DataBrowser() {
                                 name={t.table_name}
                                 rows={t.approx_rows}
                                 size={t.size_bytes}
-                                selected={selected === t.table_name}
-                                onClick={() => loadTable(t.table_name)}
+                                selected={isSelected(db.name, t.table_schema, t.table_name)}
+                                onClick={() => loadTable(db.name, t.table_schema, t.table_name)}
                               />
                             ))}
                           </div>
                         ))
-                      ) : (
-                        <div className="px-6 py-3 text-xs text-zinc-600">
-                          {isCurrentDb ? 'No tables' : (
-                            <span className="flex items-center gap-1.5">
-                              <HardDrive className="w-3 h-3" />
-                              {fmtBytes(parseInt(db.size_bytes || 0))}
-                              {db.table_count > 0 && ` · ${db.table_count} tables`}
-                            </span>
-                          )}
-                        </div>
                       )}
                     </div>
                   )}
@@ -275,7 +312,7 @@ export default function DataBrowser() {
           )}
         </div>
         <div className="px-4 py-3 border-t border-surface-4 text-xs text-zinc-500">
-          {databases.length} databases · {schemas.length} tables
+          {databases.length} databases · {Object.values(dbTables).reduce((n, v) => n + v.tables.length, 0)} tables loaded
         </div>
       </div>
 
@@ -293,8 +330,9 @@ export default function DataBrowser() {
             {/* Table header bar */}
             <div className="px-5 py-4 border-b border-surface-4 flex items-center gap-4 bg-surface-1/50">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100 font-mono">{selected}</h2>
+                <h2 className="text-lg font-semibold text-zinc-100 font-mono">{selected.name}</h2>
                 <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-zinc-500 font-mono">{selected.db}.{selected.schema}</span>
                   <span className="text-xs text-zinc-500">{total.toLocaleString()} rows</span>
                   <span className="text-xs text-zinc-600">{rows.length.toLocaleString()} loaded</span>
                   {schema?.primaryKey?.length > 0 && (
@@ -316,6 +354,11 @@ export default function DataBrowser() {
               {dataLoading && (
                 <div className="absolute inset-0 bg-surface-0/60 flex items-center justify-center z-10">
                   <Loader2 className="w-6 h-6 text-accent animate-spin" />
+                </div>
+              )}
+              {tableError && (
+                <div className="m-5 p-4 rounded-lg border border-red-500/30 bg-red-500/5 text-sm text-red-300">
+                  Could not load this table: {tableError}
                 </div>
               )}
               {columns.length > 0 && (
