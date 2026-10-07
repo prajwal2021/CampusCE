@@ -71,16 +71,16 @@ export default function DataBrowser() {
     }).catch(() => setLoading(false));
   }, []);
 
-  const fetchDbTables = useCallback(async (dbName) => {
-    setDbTables(prev => ({ ...prev, [dbName]: { status: 'loading', tables: [] } }));
+  const fetchDbTables = useCallback(async (dbName, system = false) => {
+    setDbTables(prev => ({ ...prev, [dbName]: { status: 'loading', tables: [], system } }));
     try {
-      const d = await get(`/databases?db=${encodeURIComponent(dbName)}`);
+      const d = await get(`/databases?db=${encodeURIComponent(dbName)}${system ? '&system=1' : ''}`);
       setDbTables(prev => ({
         ...prev,
-        [dbName]: d.error ? { status: 'error', tables: [], error: d.error } : { status: 'ready', tables: d.tables || [] },
+        [dbName]: d.error ? { status: 'error', tables: [], error: d.error, system } : { status: 'ready', tables: d.tables || [], system },
       }));
     } catch (e) {
-      setDbTables(prev => ({ ...prev, [dbName]: { status: 'error', tables: [], error: e.message } }));
+      setDbTables(prev => ({ ...prev, [dbName]: { status: 'error', tables: [], error: e.message, system } }));
     }
   }, []);
 
@@ -281,9 +281,14 @@ export default function DataBrowser() {
                           <button onClick={() => fetchDbTables(db.name)} className="text-accent hover:underline">Retry</button>
                         </div>
                       ) : entry.tables.length === 0 ? (
-                        <div className="px-6 py-3 text-xs text-zinc-600 flex items-center gap-1.5">
-                          <HardDrive className="w-3 h-3" />
-                          No tables · {fmtBytes(parseInt(db.size_bytes || 0))}
+                        <div className="px-6 py-3 text-xs text-zinc-600 space-y-1.5">
+                          <p className="flex items-center gap-1.5">
+                            <HardDrive className="w-3 h-3" />
+                            No user tables · {fmtBytes(parseInt(db.size_bytes || 0))}
+                          </p>
+                          <button onClick={() => fetchDbTables(db.name, true)} className="text-accent hover:underline">
+                            Show system catalogs
+                          </button>
                         </div>
                       ) : (
                         Object.entries(groupBySchema(entry.tables)).map(([schemaName, tables]) => (
@@ -303,6 +308,11 @@ export default function DataBrowser() {
                             ))}
                           </div>
                         ))
+                      )}
+                      {entry?.status === 'ready' && entry.system && (
+                        <button onClick={() => fetchDbTables(db.name, false)} className="px-6 py-2 text-xs text-accent hover:underline">
+                          Hide system catalogs
+                        </button>
                       )}
                     </div>
                   )}
