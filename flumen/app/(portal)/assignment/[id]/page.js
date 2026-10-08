@@ -44,7 +44,7 @@ export default function AssignmentPage() {
           ['Opens', fmtDateTime(a.unlock_at)],
           ['Closes', fmtDateTime(a.lock_at)],
           ['Group', a.group_name],
-          ['Submission type', a.submission_types ? String(a.submission_types).replace(/_/g, ' ') : null],
+          ['Submission type', a.submission_types ? String(a.submission_types).replace(/[{}"]/g, '').replace(/_/g, ' ').replace(/,/g, ', ') : null],
           ['Grading', a.grading_type ? String(a.grading_type).replace(/_/g, ' ') : null],
           ['Created', fmtDate(a.created)],
         ]} />
