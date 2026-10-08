@@ -15,11 +15,11 @@ $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatt
 $user = "$env:USERDOMAIN\$env:USERNAME"
 
 # Tasks only fire while the user is signed in (S4U for signed-out runs needs admin); StartWhenAvailable catches up at sign-in.
-function Register-Hourly($name, $script, $scriptArgs, $minute, $logonType) {
+function Register-Hourly($name, $script, $scriptArgs, $minute, $logonType, $everyMinutes = 60) {
     $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType $logonType -RunLevel Limited
     $start = (Get-Date).Date.AddHours((Get-Date).Hour).AddMinutes($minute)
-    if ($start -lt (Get-Date)) { $start = $start.AddHours(1) }
-    $trigger = New-ScheduledTaskTrigger -Once -At $start -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+    if ($start -lt (Get-Date)) { $start = $start.AddMinutes($everyMinutes) }
+    $trigger = New-ScheduledTaskTrigger -Once -At $start -RepetitionInterval (New-TimeSpan -Minutes $everyMinutes) -RepetitionDuration (New-TimeSpan -Days 3650)
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -WorkingDirectory $dir `
         -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$dir\$script`" $scriptArgs"
     Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
@@ -27,4 +27,5 @@ function Register-Hourly($name, $script, $scriptArgs, $minute, $logonType) {
 }
 
 Register-Hourly 'CampusCE-Pull' 'pull.ps1' '-MinHours 8' 5 'Interactive'
-Register-Hourly 'CampusCE-Push' 'push.ps1' '' 35 'Interactive'
+# Push is a quiet no-op when nothing is waiting, so check every 15 minutes: a fresh pull reaches 0003 within a quarter hour.
+Register-Hourly 'CampusCE-Push' 'push.ps1' '' 0 'Interactive' 15

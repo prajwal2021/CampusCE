@@ -41,11 +41,8 @@ function getNextPull(lastFinished, now) {
 }
 
 function getNextPush(now) {
-  let next = new Date(now);
-  if (next.getMinutes() >= 35) {
-    next.setHours(next.getHours() + 1);
-  }
-  next.setMinutes(35, 0, 0);
+  const next = new Date(now);
+  next.setMinutes(Math.floor(next.getMinutes() / 15) * 15 + 15, 0, 0);
   return { next, overdue: false };
 }
 
@@ -110,7 +107,7 @@ export default function Dashboard() {
       const discovery = await get('/actions/load');
       setPushDiscovery(discovery);
       if (discovery.nothingToPush) {
-        setPushResult({ success: true, message: 'Nothing waiting in the inbox on 0003. If you just pulled, the laptop has not uploaded it yet: run .\\push.ps1 on the laptop (VPN on), or wait for the :35 scheduled push.', results: [] });
+        setPushResult({ success: true, message: 'Nothing waiting in the inbox on 0003. If you just pulled, the laptop has not uploaded it yet: run .\\push.ps1 on the laptop (VPN on), or wait for the scheduled push, which checks every 15 minutes.', results: [] });
         return;
       }
       if (discovery.pending.length === 0) {
@@ -199,7 +196,7 @@ export default function Dashboard() {
         <ScheduleCard
           icon={ArrowUpFromLine}
           label="Next Push"
-          schedule="Every 1h · :35"
+          schedule="Every 15 min"
           next={push.next}
           overdue={push.overdue}
           countdown={fmtCountdown(push.next, now)}
