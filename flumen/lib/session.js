@@ -1,0 +1,37 @@
+/**
+ * Signed admin session cookie. Uses Web Crypto so it runs in both the Edge
+ * middleware and Node route handlers. Fails closed: with no SESSION_SECRET
+ * nothing verifies and no token can be issued.
+ */
+export const COOKIE_NAME = 'flumen_session';
+export const SESSION_HOURS = 12;
+
+const enc = new TextEncoder();
+
+async function hmacHex(message, secret) {
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(message));
+  return Array.from(new Uint8Array(sig), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function safeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+export async function createToken() {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return null;
+  const exp = String(Date.now() + SESSION_HOURS * 3600_000);
+  return `${exp}.${await hmacHex(exp, secret)}`;
+}
+
+export async function verifyToken(token) {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || !token) return false;
+  const [exp, sig] = token.split('.');
+  if (!exp || !sig || Number(exp) < Date.now()) return false;
+  return safeEqual(sig, await hmacHex(exp, secret));
+}
