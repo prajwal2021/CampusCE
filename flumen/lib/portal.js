@@ -51,6 +51,9 @@ export const groupExpr = (a = 'c') => `CASE
   WHEN ${a}.account_desc = 'CCFCS' OR ${a}.name ~* '^CCFCS' THEN 'ccfcs'
   ELSE 'other' END`;
 
+export const groupLabelExpr = (a = 'c') =>
+  `CASE ${groupExpr(a)} ${Object.entries(GROUPS).map(([k, g]) => `WHEN '${k}' THEN '${g.label.replace(/'/g, "''")}'`).join(' ')} END`;
+
 const personDerived = (type, group) => `(
   SELECT u.id, u.name, u.sortable_name,
          count(*) AS enrollments,
@@ -93,6 +96,7 @@ export const TYPES = {
     from: 'dbo.canvas_courses c',
     where: `c.workflow_state <> 'deleted'`,
     select: `c.id, c.name, c.course_code AS code, ${COURSE_STATE} AS status,
+             ${groupExpr('c')} AS program_key, ${groupLabelExpr('c')} AS program,
              ${SUB_STUDENTS} AS students, ${SUB_TEACHERS} AS instructors, c.created_at AS created`,
     statusExpr: 'c.workflow_state',
     statuses: [
@@ -103,12 +107,13 @@ export const TYPES = {
     search: ['c.name', 'c.course_code'],
     columns: [
       { key: 'name', label: 'Course' },
+      { key: 'program', label: 'Program', programLink: true },
       { key: 'status', label: 'Status', badge: true },
       { key: 'students', label: 'Students', num: true },
       { key: 'instructors', label: 'Instructors', num: true },
       { key: 'created', label: 'Created', date: true },
     ],
-    sort: { name: 'c.name', status: 'status', students: 'students', instructors: 'instructors', created: 'c.created_at' },
+    sort: { name: 'c.name', program: 'program', status: 'status', students: 'students', instructors: 'instructors', created: 'c.created_at' },
     defaultSort: 'name',
     link: { kind: 'course', key: 'id' },
   },

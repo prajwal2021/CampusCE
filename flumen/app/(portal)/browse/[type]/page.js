@@ -89,6 +89,7 @@ function Browse() {
     if (c.date) return fmtDate(v);
     if (c.num) return fmtNum(v);
     if (v === null || v === undefined || v === '') return <span className="text-zinc-600">—</span>;
+    if (c.programLink && r.program_key) return <Link href={`/group/${r.program_key}`} className="badge-info hover:bg-accent/20">{v}</Link>;
     if (c.courseLink && r.course_id) return <Link href={`/course/${r.course_id}`} className={linkCls}>{v}</Link>;
     if (ci === 0 && link) return <Link href={`/${KIND[link.kind]}/${r[link.key]}`} className={linkCls}>{v}</Link>;
     return v;
@@ -172,7 +173,7 @@ function Browse() {
                 <tr key={`${r.id ?? i}-${i}`} className="hover:bg-surface-3/40 transition-colors">
                   {cols.map((c, ci) => (
                     <td key={c.key} className={clsx('px-4 py-2.5 border-b border-surface-3 text-zinc-300',
-                      c.num ? 'text-right tabular-nums' : 'text-left max-w-[380px] truncate')}
+                      c.num ? 'text-right tabular-nums' : 'text-left max-w-[640px] truncate')}
                       title={typeof r[c.key] === 'string' ? r[c.key] : undefined}>
                       {cell(c, r, ci)}
                     </td>

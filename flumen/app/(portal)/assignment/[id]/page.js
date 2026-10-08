@@ -30,7 +30,7 @@ export default function AssignmentPage() {
         <p className="text-sm text-zinc-500">In {L.course(a.course_id, a.course)}</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
         <Metric label="Turned in" value={`${fmtNum(m.turned_in)} / ${fmtNum(m.students)}`} sub={`${fmtNum(m.not_submitted)} not submitted`} />
         <Metric label="Graded" value={fmtNum(m.graded)} sub={`${fmtNum(m.awaiting_grading)} awaiting grading`} />
         <Metric label="Average score" value={fmtNum(m.avg_score)} sub={a.points ? `out of ${fmtNum(a.points)}` : undefined} />

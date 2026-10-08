@@ -3,10 +3,12 @@ import { GraduationCap } from 'lucide-react';
 import SignOut from '@/components/SignOut';
 
 const LINKS = [
+  { href: '/programs', label: 'Programs' },
   { href: '/browse/courses', label: 'Courses' },
   { href: '/browse/students', label: 'Students' },
   { href: '/browse/instructors', label: 'Instructors' },
   { href: '/browse/sections', label: 'Sections' },
+  { href: '/browse/enrollments', label: 'Enrollments' },
   { href: '/browse/assignments', label: 'Assignments' },
 ];
 
@@ -14,7 +16,7 @@ export default function PortalLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-20 bg-surface-1/90 backdrop-blur border-b border-surface-4">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-6">
+        <div className="w-full px-4 sm:px-6 lg:px-10 h-14 flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <GraduationCap className="w-5 h-5 text-accent" />
             <span className="font-semibold text-zinc-100">CampusCE Overview</span>

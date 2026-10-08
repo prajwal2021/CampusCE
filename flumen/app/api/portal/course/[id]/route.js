@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { studentProgress, progressMetrics, instructorsOfCourse } from '@/lib/portal-queries';
+import { GROUPS, groupExpr } from '@/lib/portal';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,9 +14,10 @@ export async function GET(request, { params }) {
       `SELECT c.id, c.name, c.course_code AS code, c.account_desc AS account,
               CASE c.workflow_state WHEN 'available' THEN 'Published' WHEN 'claimed' THEN 'Unpublished'
                    WHEN 'completed' THEN 'Concluded' ELSE c.workflow_state END AS status,
-              c.created_at AS created, c.start_at, c.conclude_at
+              c.created_at AS created, c.start_at, c.conclude_at, ${groupExpr('c')} AS program_key
        FROM dbo.canvas_courses c WHERE c.id = $1 AND c.workflow_state <> 'deleted'`, [id]);
     if (course.rows.length === 0) return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+    course.rows[0].program = GROUPS[course.rows[0].program_key]?.label || null;
 
     const [students, instructors, sections, assignments, totals] = await Promise.all([
       studentProgress(id),

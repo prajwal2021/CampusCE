@@ -26,12 +26,12 @@ export default function GroupPage() {
   return (
     <PageShell>
       <div className="space-y-2">
-        <Crumbs items={[{ label: 'Overview', href: '/' }, { label: g.label }]} />
+        <Crumbs items={[{ label: 'Overview', href: '/' }, { label: 'Programs', href: '/programs' }, { label: g.label }]} />
         <h1 className="text-2xl font-semibold text-zinc-100">{g.label}</h1>
         <p className="text-sm text-zinc-500">{g.blurb}</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
         <Metric label="Courses" value={fmtNum(m.courses)} sub={`${fmtNum(m.courses_published)} published`} href={`/browse/courses${q}`} />
         <Metric label="Students" value={fmtNum(m.students)} sub={`${fmtNum(m.students_active)} active`} href={`/browse/students${q}`} />
         <Metric label="Instructors" value={fmtNum(m.instructors)} href={`/browse/instructors${q}`} />
@@ -53,7 +53,7 @@ export default function GroupPage() {
         />
       </Panel>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Panel title="Largest courses" right={viewAll('courses', 'View all courses')}>
           <Table
             rows={top_courses}

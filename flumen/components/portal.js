@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { get } from '@/lib/api';
-import { Loader2, AlertCircle, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Loader2, AlertCircle, ChevronRight, ArrowLeft } from 'lucide-react';
 import clsx from 'clsx';
 
 /* ---------- formatting ---------- */
@@ -84,17 +85,36 @@ export function ProgressBar({ pct, label }) {
   );
 }
 
-export function Crumbs({ items }) {
+export function BackButton({ fallback = '/' }) {
+  const router = useRouter();
+  const goBack = () => (window.history.length > 1 ? router.back() : router.push(fallback));
   return (
-    <nav className="flex items-center gap-1.5 text-sm text-zinc-500 flex-wrap" aria-label="Breadcrumb">
-      {items.map((it, i) => (
-        <span key={i} className="flex items-center gap-1.5 min-w-0">
-          {i > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
-          {it.href ? <Link href={it.href} className="hover:text-zinc-200 truncate">{it.label}</Link>
-                   : <span className="text-zinc-300 truncate">{it.label}</span>}
-        </span>
-      ))}
-    </nav>
+    <button
+      onClick={goBack}
+      className="inline-flex items-center gap-1.5 pl-2 pr-3 py-1.5 rounded-lg border border-surface-4 text-sm text-zinc-300
+                 hover:bg-surface-3 hover:text-zinc-100 transition-colors shrink-0"
+      aria-label="Go back"
+    >
+      <ArrowLeft className="w-4 h-4" /> Back
+    </button>
+  );
+}
+
+export function Crumbs({ items }) {
+  const parent = [...items].reverse().find(i => i.href)?.href || '/';
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <BackButton fallback={parent} />
+      <nav className="flex items-center gap-1.5 text-sm text-zinc-500 flex-wrap min-w-0" aria-label="Breadcrumb">
+        {items.map((it, i) => (
+          <span key={i} className="flex items-center gap-1.5 min-w-0">
+            {i > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+            {it.href ? <Link href={it.href} className="hover:text-zinc-200 truncate">{it.label}</Link>
+                     : <span className="text-zinc-300 truncate">{it.label}</span>}
+          </span>
+        ))}
+      </nav>
+    </div>
   );
 }
 
@@ -166,12 +186,12 @@ export const L = {
 };
 
 export function PageShell({ children }) {
-  return <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 space-y-6">{children}</div>;
+  return <div className="w-full px-4 sm:px-6 lg:px-10 py-6 space-y-6">{children}</div>;
 }
 
 export function Facts({ items }) {
   return (
-    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 px-5 py-4">
+    <dl className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-3 px-5 py-4">
       {items.filter(Boolean).map(([k, v]) => (
         <div key={k} className="min-w-0">
           <dt className="text-xs text-zinc-500">{k}</dt>

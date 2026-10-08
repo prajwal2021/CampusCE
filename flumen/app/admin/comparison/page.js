@@ -58,7 +58,7 @@ export default function Comparison() {
     }));
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-6 space-y-6 ">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-100">Comparison</h1>
         <p className="text-sm text-zinc-500 mt-1">Side-by-side run analysis</p>

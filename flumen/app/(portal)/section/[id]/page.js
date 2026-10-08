@@ -30,7 +30,7 @@ export default function SectionPage() {
         <p className="text-sm text-zinc-500">Section of {L.course(s.course_id, s.course)}</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
         <Metric label="Students" value={fmtNum(m.students)} sub={`${fmtNum(m.students_active)} active · ${fmtNum(m.students_inactive)} inactive`} />
         <Metric label="Avg completion" value={fmtPct(m.avg_completion_pct)} sub={`${fmtNum(m.finished_all)} finished every assignment`} />
         <Metric label="Avg grade" value={fmtPct(m.avg_grade_pct)} />

@@ -35,7 +35,7 @@ export default function PersonPage() {
       </div>
 
       {isStudent && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
           <Metric label="Courses" value={fmtNum(m.courses_taking)} sub={`${fmtNum(m.courses_active)} active · ${fmtNum(m.courses_completed)} completed · ${fmtNum(m.courses_inactive)} inactive`} />
           <Metric label="Avg completion" value={fmtPct(m.avg_completion_pct)} sub="Across their courses" />
           <Metric label="Avg grade" value={fmtPct(m.avg_grade_pct)} sub="Current course scores" />
@@ -43,7 +43,7 @@ export default function PersonPage() {
         </div>
       )}
       {!isStudent && isInstructor && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
           <Metric label="Courses teaching" value={fmtNum(m.courses_teaching)} />
           <Metric label="Active students" value={fmtNum(teaching.reduce((s, r) => s + Number(r.students), 0))} sub="Across their courses" />
         </div>

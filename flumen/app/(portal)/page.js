@@ -20,7 +20,7 @@ export default function Overview() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <Metric label="Courses" value={fmtNum(s.courses)} sub={`${fmtNum(s.courses_published)} published`} href="/browse/courses" />
         <Metric label="Students" value={fmtNum(s.students)} sub={`${fmtNum(s.students_active)} active`} href="/browse/students" />
         <Metric label="Instructors" value={fmtNum(s.instructors)} sub={`${fmtNum(s.instructors_active)} active`} href="/browse/instructors" />
@@ -30,8 +30,13 @@ export default function Overview() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-zinc-300">Programs</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-zinc-300">Programs</h2>
+          <Link href="/programs" className="text-xs text-accent hover:underline inline-flex items-center gap-1">
+            View all programs <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {s.groups.map(g => (
             <Link key={g.key} href={`/group/${g.key}`}
               className="card group hover:border-accent/50 hover:bg-surface-3/60 transition-colors">

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   useFetch, Loading, ErrorBox, PageShell, Crumbs, Metric, Panel, Table, Facts, StatusBadge, ProgressBar,
@@ -25,7 +26,7 @@ export default function CoursePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-4">
         <Metric label="Students" value={fmtNum(m.students)} sub={`${fmtNum(m.students_active)} active · ${fmtNum(m.students_inactive)} inactive · ${fmtNum(m.students_completed)} completed`} />
         <Metric label="Avg completion" value={fmtPct(m.avg_completion_pct)} sub={`${fmtNum(m.finished_all)} finished every assignment`} />
         <Metric label="Avg grade" value={fmtPct(m.avg_grade_pct)} sub="Current course score" />
@@ -38,6 +39,7 @@ export default function CoursePage() {
 
       <Panel title="Course details">
         <Facts items={[
+          ['Program', c.program ? <Link href={`/group/${c.program_key}`} className="text-accent hover:underline">{c.program}</Link> : null],
           ['Course code', c.code],
           ['Account', c.account],
           ['Created', fmtDate(c.created)],
@@ -46,6 +48,7 @@ export default function CoursePage() {
         ]} />
       </Panel>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <Panel title="Instructors" count={instructors.length}>
         <Table
           rows={instructors}
@@ -57,6 +60,19 @@ export default function CoursePage() {
           ]}
         />
       </Panel>
+
+      <Panel title="Sections" count={sections.length}>
+        <Table
+          rows={sections}
+          rowKey={r => r.id}
+          columns={[
+            { label: 'Section', render: r => L.section(r.id, r.name) },
+            { label: 'Status', render: r => <StatusBadge status={r.status} /> },
+            { label: 'Active students', num: true, render: r => fmtNum(r.students) },
+          ]}
+        />
+      </Panel>
+      </div>
 
       <Panel title="Students" count={students.length}>
         <Table
@@ -73,18 +89,6 @@ export default function CoursePage() {
             { label: 'Hours active', num: true, render: r => fmtNum(r.hours_active) },
             { label: 'Enrolled', render: r => fmtDate(r.enrolled), nowrap: true },
             { label: 'Last activity', render: r => fmtDate(r.last_activity), nowrap: true },
-          ]}
-        />
-      </Panel>
-
-      <Panel title="Sections" count={sections.length}>
-        <Table
-          rows={sections}
-          rowKey={r => r.id}
-          columns={[
-            { label: 'Section', render: r => L.section(r.id, r.name) },
-            { label: 'Status', render: r => <StatusBadge status={r.status} /> },
-            { label: 'Active students', num: true, render: r => fmtNum(r.students) },
           ]}
         />
       </Panel>
