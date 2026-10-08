@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { GraduationCap } from 'lucide-react';
 import SignOut from '@/components/SignOut';
+import { ScopeProvider, ScopeToggle } from '@/components/scope';
 
 const LINKS = [
   { href: '/programs', label: 'Programs' },
@@ -14,6 +15,7 @@ const LINKS = [
 
 export default function PortalLayout({ children }) {
   return (
+    <ScopeProvider>
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-20 bg-surface-1/90 backdrop-blur border-b border-surface-4">
         <div className="w-full px-4 sm:px-6 lg:px-10 h-14 flex items-center gap-6">
@@ -29,10 +31,14 @@ export default function PortalLayout({ children }) {
               </Link>
             ))}
           </nav>
-          <SignOut />
+          <div className="ml-auto flex items-center gap-3">
+            <ScopeToggle />
+            <SignOut />
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>
     </div>
+    </ScopeProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { GROUPS, groupExpr } from '@/lib/portal';
+import { GROUPS, groupExpr, scopeCond } from '@/lib/portal';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +10,8 @@ export async function GET(request, { params }) {
     const def = GROUPS[key];
     if (!def) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
-    const inGroup = `${groupExpr('c')} = '${key}' AND c.workflow_state <> 'deleted'`;
+    const scope = new URL(request.url).searchParams.get('scope') === 'all' ? 'all' : 'ce';
+    const inGroup = `${groupExpr('c')} = '${key}' AND c.workflow_state <> 'deleted'${scopeCond(scope) ? ` AND ${scopeCond(scope)}` : ''}`;
 
     const [counts, breakdown, topCourses, completion, instructors] = await Promise.all([
       q(`SELECT
@@ -65,6 +66,7 @@ export async function GET(request, { params }) {
     ]);
 
     return NextResponse.json({
+      scope,
       group: { key, label: def.label, short: def.short, blurb: def.blurb, breakdownTitle: def.breakdownTitle },
       metrics: { ...counts.rows[0], avg_completion_pct: completion.rows[0]?.avg_completion_pct ?? null },
       breakdown: breakdown.rows,

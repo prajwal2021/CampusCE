@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { get } from '@/lib/api';
+import { useScope } from '@/components/scope';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle, ChevronRight, ArrowLeft } from 'lucide-react';
 import clsx from 'clsx';
@@ -26,7 +27,9 @@ export const fmtPct = n => (n === null || n === undefined ? '—' : `${Number(n)
 
 /* ---------- data loading ---------- */
 
-export function useFetch(path) {
+export function useFetch(rawPath) {
+  const { scope } = useScope();
+  const path = rawPath.startsWith('/portal/') ? `${rawPath}${rawPath.includes('?') ? '&' : '?'}scope=${scope}` : rawPath;
   const [state, setState] = useState({ data: null, error: null, loading: true });
   useEffect(() => {
     let live = true;

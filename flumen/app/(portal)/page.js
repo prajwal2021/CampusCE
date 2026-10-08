@@ -18,6 +18,11 @@ export default function Overview() {
           Courses, people and progress across CampusCE. Select any figure to see the full list.
           {s.data_as_of && <span> Data as of {fmtDateTime(s.data_as_of)} CST.</span>}
         </p>
+        <p className="text-xs text-zinc-500 mt-1">
+          {s.scope === 'ce'
+            ? `Showing the ${fmtNum(s.courses)} courses created from CampusCE, out of ${fmtNum(s.courses_all)} in Canvas. Switch to All Canvas (top right) to include development, sandbox and migrated courses.`
+            : `Showing all ${fmtNum(s.courses_all)} courses in Canvas. Switch to CampusCE (top right) to see only courses created from CampusCE.`}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">

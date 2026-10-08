@@ -46,15 +46,19 @@ export const GROUPS = {
 };
 
 export const groupExpr = (a = 'c') => `CASE
-  WHEN ${a}.name LIKE '%(CLA)%' OR ${a}.name ~* '(^|[^a-z])CLA-' THEN 'cla'
+  WHEN ${a}.name LIKE '%(CLA)%' OR ${a}.name ~* '(^|[^a-z])CLA-' OR ${a}.name ~* 'CLA(MC|SC|CC)-[0-9]' OR ${a}.sis_source_id ~ '^9[0-9][0-9][.]' THEN 'cla'
   WHEN ${a}.name ~* '-MC[0-9]+([^0-9]|$)' OR ${a}.account_desc = '10K' THEN 'mc'
   WHEN ${a}.account_desc = 'CCFCS' OR ${a}.name ~* '^CCFCS' THEN 'ccfcs'
   ELSE 'other' END`;
 
+/** CampusCE-provisioned courses carry a SIS id of the form <course>.<class>.<term>, e.g. 900.100.OPEN. */
+export const CE_PATTERN = '^[0-9]+[.][0-9]+[.][A-Za-z0-9]+$';
+export const scopeCond = (scope, a = 'c') => (scope === 'all' ? '' : `${a}.sis_source_id ~ '${CE_PATTERN}'`);
+
 export const groupLabelExpr = (a = 'c') =>
   `CASE ${groupExpr(a)} ${Object.entries(GROUPS).map(([k, g]) => `WHEN '${k}' THEN '${g.label.replace(/'/g, "''")}'`).join(' ')} END`;
 
-const personDerived = (type, group) => `(
+const personDerived = (type, group, scope) => `(
   SELECT u.id, u.name, u.sortable_name,
          count(*) AS enrollments,
          count(*) FILTER (WHERE e.workflow_state = 'active') AS active_enrollments,
@@ -65,11 +69,12 @@ const personDerived = (type, group) => `(
   JOIN dbo.canvas_courses c ON c.id = e.course_id AND c.workflow_state <> 'deleted'
   WHERE e.type = '${type}' AND e.workflow_state NOT IN ('deleted', 'rejected')
     ${group ? `AND ${groupExpr('c')} = '${group}'` : ''}
+    ${scopeCond(scope) ? `AND ${scopeCond(scope)}` : ''}
   GROUP BY u.id, u.name, u.sortable_name) p`;
 
 const personType = (title, type, noun) => ({
   title,
-  from: group => personDerived(type, group),
+  from: (group, scope) => personDerived(type, group, scope),
   where: 'TRUE',
   select: `p.id, p.name,
            CASE WHEN p.active_enrollments > 0 THEN 'Active' ELSE 'Inactive' END AS status,

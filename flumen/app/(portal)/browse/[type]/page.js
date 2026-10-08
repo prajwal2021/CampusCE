@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { get } from '@/lib/api';
+import { useScope } from '@/components/scope';
 import { Search, Loader2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import clsx from 'clsx';
 import {
@@ -17,6 +18,7 @@ function Browse() {
   const { type } = useParams();
   const sp = useSearchParams();
   const group = sp.get('group') || '';
+  const { scope } = useScope();
 
   const [meta, setMeta] = useState(null);
   const [rows, setRows] = useState([]);
@@ -33,8 +35,8 @@ function Browse() {
 
   const url = useCallback((offset, qq, st, so, di) =>
     `/portal/list?type=${encodeURIComponent(type)}&offset=${offset}&limit=${PAGE}` +
-    `&q=${encodeURIComponent(qq)}&status=${encodeURIComponent(st)}&group=${encodeURIComponent(group)}` +
-    (so ? `&sort=${so}&dir=${di}` : ''), [type, group]);
+    `&q=${encodeURIComponent(qq)}&status=${encodeURIComponent(st)}&group=${encodeURIComponent(group)}&scope=${scope}` +
+    (so ? `&sort=${so}&dir=${di}` : ''), [type, group, scope]);
 
   /* first page, restarted whenever search / filter / sort change */
   useEffect(() => {
