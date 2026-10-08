@@ -9,11 +9,23 @@ const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 10 * 60_000;
 
 const digest = s => createHash('sha256').update(String(s)).digest();
+const same = (a, b) => timingSafeEqual(digest(a), digest(b));
+
+function accounts() {
+  const list = [];
+  if (process.env.ADMIN_USER && process.env.ADMIN_PASSWORD) {
+    list.push({ role: 'admin', user: process.env.ADMIN_USER, pass: process.env.ADMIN_PASSWORD });
+  }
+  if (process.env.VIEWER_USER && process.env.VIEWER_PASSWORD) {
+    list.push({ role: 'user', user: process.env.VIEWER_USER, pass: process.env.VIEWER_PASSWORD });
+  }
+  return list;
+}
 
 export async function POST(request) {
-  const expected = process.env.ADMIN_PASSWORD;
-  if (!expected || !process.env.SESSION_SECRET) {
-    return NextResponse.json({ error: 'Admin sign-in is not configured on this server yet.' }, { status: 503 });
+  const list = accounts();
+  if (list.length === 0 || !process.env.SESSION_SECRET) {
+    return NextResponse.json({ error: 'Sign-in is not configured on this server yet.' }, { status: 503 });
   }
 
   const ip = (request.headers.get('x-forwarded-for') || 'unknown').split(',')[0].trim();
@@ -23,18 +35,23 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Too many attempts. Try again in a few minutes.' }, { status: 429 });
   }
 
-  const { password } = await request.json().catch(() => ({}));
-  const ok = typeof password === 'string' && timingSafeEqual(digest(password), digest(expected));
-  if (!ok) {
+  const { username, password } = await request.json().catch(() => ({}));
+  let role = null;
+  for (const a of list) {
+    const ok = typeof username === 'string' && typeof password === 'string' && same(username, a.user) && same(password, a.pass);
+    if (ok) role = a.role;
+  }
+
+  if (!role) {
     const r = rec && rec.resetAt > now ? rec : { count: 0, resetAt: now + WINDOW_MS };
     r.count++;
     attempts.set(ip, r);
-    return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 });
+    return NextResponse.json({ error: 'Incorrect username or password.' }, { status: 401 });
   }
 
   attempts.delete(ip);
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(COOKIE_NAME, await createToken(), {
+  const res = NextResponse.json({ ok: true, role });
+  res.cookies.set(COOKIE_NAME, await createToken(role), {
     httpOnly: true,
     sameSite: 'lax',
     secure: request.headers.get('x-forwarded-proto') === 'https',

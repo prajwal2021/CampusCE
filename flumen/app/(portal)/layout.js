@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { GraduationCap } from 'lucide-react';
+import SignOut from '@/components/SignOut';
 
 const LINKS = [
   { href: '/browse/courses', label: 'Courses' },
@@ -26,6 +27,7 @@ export default function PortalLayout({ children }) {
               </Link>
             ))}
           </nav>
+          <SignOut />
         </div>
       </header>
       <main className="flex-1">{children}</main>

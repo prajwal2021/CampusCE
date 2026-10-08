@@ -2,23 +2,29 @@ import { NextResponse } from 'next/server';
 import { COOKIE_NAME, verifyToken } from '@/lib/session';
 
 /**
- * Everything except the public overview (/, /browse, /courses, /api/portal) and
- * the sign-in endpoints requires an admin session.
+ * Access rules
+ *   open:        /login, /api/auth/*
+ *   admin only:  /admin/*, every /api/* except /api/portal/* and /api/auth/*
+ *   user+admin:  the overview pages and /api/portal/*
  */
-export const config = { matcher: ['/admin/:path*', '/api/:path*'] };
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] };
 
 export async function middleware(req) {
   const path = req.nextUrl.pathname;
-  if (path.startsWith('/api/portal') || path.startsWith('/api/auth')) return NextResponse.next();
+  if (path === '/login' || path.startsWith('/api/auth')) return NextResponse.next();
 
-  if (await verifyToken(req.cookies.get(COOKIE_NAME)?.value)) return NextResponse.next();
+  const role = await verifyToken(req.cookies.get(COOKIE_NAME)?.value);
+  const isApi = path.startsWith('/api/');
+  const adminOnly = path.startsWith('/admin') || (isApi && !path.startsWith('/api/portal'));
 
-  if (path.startsWith('/api/')) {
-    return NextResponse.json({ error: 'Admin sign-in required' }, { status: 401 });
+  if (role === 'admin' || (role === 'user' && !adminOnly)) return NextResponse.next();
+
+  if (isApi) {
+    return NextResponse.json({ error: role ? 'Admin access required' : 'Sign-in required' }, { status: role ? 403 : 401 });
   }
   const url = req.nextUrl.clone();
-  url.pathname = '/login';
+  url.pathname = role ? '/' : '/login';
   url.search = '';
-  url.searchParams.set('next', path);
+  if (!role) url.searchParams.set('next', path);
   return NextResponse.redirect(url);
 }

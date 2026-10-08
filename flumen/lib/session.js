@@ -1,7 +1,7 @@
 /**
- * Signed admin session cookie. Uses Web Crypto so it runs in both the Edge
- * middleware and Node route handlers. Fails closed: with no SESSION_SECRET
- * nothing verifies and no token can be issued.
+ * Signed session cookie carrying a role ('admin' or 'user'). Uses Web Crypto so it runs in both
+ * the Edge middleware and Node route handlers. Fails closed: with no SESSION_SECRET nothing
+ * verifies and no token can be issued.
  */
 export const COOKIE_NAME = 'flumen_session';
 export const SESSION_HOURS = 12;
@@ -21,17 +21,18 @@ function safeEqual(a, b) {
   return diff === 0;
 }
 
-export async function createToken() {
+export async function createToken(role) {
   const secret = process.env.SESSION_SECRET;
-  if (!secret) return null;
-  const exp = String(Date.now() + SESSION_HOURS * 3600_000);
-  return `${exp}.${await hmacHex(exp, secret)}`;
+  if (!secret || !['admin', 'user'].includes(role)) return null;
+  const body = `${role}.${Date.now() + SESSION_HOURS * 3600_000}`;
+  return `${body}.${await hmacHex(body, secret)}`;
 }
 
+/** Returns 'admin', 'user', or null. */
 export async function verifyToken(token) {
   const secret = process.env.SESSION_SECRET;
-  if (!secret || !token) return false;
-  const [exp, sig] = token.split('.');
-  if (!exp || !sig || Number(exp) < Date.now()) return false;
-  return safeEqual(sig, await hmacHex(exp, secret));
+  if (!secret || !token) return null;
+  const [role, exp, sig] = token.split('.');
+  if (!['admin', 'user'].includes(role) || !exp || !sig || Number(exp) < Date.now()) return null;
+  return safeEqual(sig, await hmacHex(`${role}.${exp}`, secret)) ? role : null;
 }
