@@ -15,7 +15,7 @@ export default function GroupPage() {
   if (loading) return <Loading />;
   if (error) return <PageShell><ErrorBox message={error} /></PageShell>;
 
-  const { group: g, metrics: m, breakdown, top_courses, instructors } = data;
+  const { group: g, metrics: m, breakdown, top_courses, instructors, expected } = data;
   const q = `?group=${g.key}`;
   const viewAll = (type, label) => (
     <Link href={`/browse/${type}${q}`} className="text-xs text-accent hover:underline inline-flex items-center gap-1">
@@ -40,6 +40,27 @@ export default function GroupPage() {
         <Metric label="Assignments" value={fmtNum(m.assignments)} sub="Published" href={`/browse/assignments${q}`} />
         <Metric label="Avg completion" value={fmtPct(m.avg_completion_pct)} sub="Active students" />
       </div>
+
+      {expected && (
+        <Panel title="Expected courses" right={<span className="text-xs text-zinc-500 tabular-nums">{expected.filter(e => e.found).length} of {expected.length} loaded</span>}>
+          <Table
+            rows={expected}
+            rowKey={r => r.sis}
+            columns={[
+              { label: 'Offering', render: r => (r.found ? L.course(r.course_id, r.name) : r.name), className: 'max-w-[520px]' },
+              { label: 'Type', render: r => r.kind },
+              { label: 'CampusCE SKU / SIS ID', render: r => <span className="font-mono text-xs">{r.sis}</span> },
+              { label: 'Canvas course', num: true, render: r => r.canvas_id },
+              { label: 'In our data', render: r => <span className={r.found ? 'badge-ok' : 'badge-warn'}>{r.found ? 'Loaded' : 'Not loaded yet'}</span> },
+            ]}
+          />
+          {expected.some(e => !e.found) && (
+            <p className="px-5 py-3 text-xs text-zinc-500 border-t border-surface-3">
+              Courses marked Not loaded yet are not in the data. They appear after the next pull and push.
+            </p>
+          )}
+        </Panel>
+      )}
 
       <Panel title={g.breakdownTitle} count={breakdown.length}>
         <Table

@@ -16,11 +16,11 @@ const ENROLL_STATE = `CASE e.workflow_state WHEN 'active' THEN 'Active' WHEN 'in
  */
 export const GROUPS = {
   cla: {
-    label: 'Career Learning Academy',
+    label: 'Career Learning Academy (new)',
     short: 'CLA',
-    blurb: 'Short courses in leadership, technical skills and communication for the workplace.',
-    breakdownTitle: 'By course series',
-    breakdown: `trim(split_part(c.name, ':', 1))`,
+    blurb: 'The new open-enrollment Leadership for the Workplace offerings created in CampusCE: one microcertificate and six short courses.',
+    breakdownTitle: 'By offering',
+    breakdown: `CASE WHEN c.sis_source_id LIKE '900.%' THEN 'Microcertificate (CLAMC)' ELSE 'Short course (CLASC)' END`,
   },
   mc: {
     label: 'Microcertificates',
@@ -46,7 +46,7 @@ export const GROUPS = {
 };
 
 export const groupExpr = (a = 'c') => `CASE
-  WHEN ${a}.name LIKE '%(CLA)%' OR ${a}.name ~* '(^|[^a-z])CLA-' OR ${a}.name ~* 'CLA(MC|SC|CC)-[0-9]' OR ${a}.sis_source_id ~ '^9[0-9][0-9][.]' THEN 'cla'
+  WHEN ${a}.sis_source_id ~ '^90[0-6][.]100[.]OPEN$' THEN 'cla'
   WHEN ${a}.name ~* '-MC[0-9]+([^0-9]|$)' OR ${a}.account_desc = '10K' THEN 'mc'
   WHEN ${a}.account_desc = 'CCFCS' OR ${a}.name ~* '^CCFCS' THEN 'ccfcs'
   ELSE 'other' END`;
@@ -203,3 +203,14 @@ export const TYPES = {
 };
 
 export const escapeLike = s => s.replace(/[\\%_]/g, m => '\\' + m);
+
+/** The Career Learning Academy offerings announced by the section coordinator (SIS id = CampusCE SKU). */
+export const CLA_EXPECTED = [
+  { sis: '900.100.OPEN', canvas_id: 1678, name: 'Leadership for the Workplace (CLAMC-01)', kind: 'Microcertificate' },
+  { sis: '901.100.OPEN', canvas_id: 1683, name: 'Leadership for the Workplace: Putting Your People First (CLASC-01)', kind: 'Short course' },
+  { sis: '902.100.OPEN', canvas_id: 1679, name: 'Leadership for the Workplace: The Role of Foresight (CLASC-01)', kind: 'Short course' },
+  { sis: '903.100.OPEN', canvas_id: 1680, name: 'Leadership for the Workplace: The Role of Character (CLASC-01)', kind: 'Short course' },
+  { sis: '904.100.OPEN', canvas_id: 1681, name: 'Leadership for the Workplace: The Leadership Triangle (CLASC-01)', kind: 'Short course' },
+  { sis: '905.100.OPEN', canvas_id: 1682, name: 'Leadership for the Workplace: Skilled Collaboration (CLASC-01)', kind: 'Short course' },
+  { sis: '906.100.OPEN', canvas_id: 1684, name: 'Leadership for the Workplace: Leadership as Service (CLASC-01)', kind: 'Short course' },
+];

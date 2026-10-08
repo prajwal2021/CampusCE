@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { GROUPS, groupExpr, scopeCond } from '@/lib/portal';
+import { GROUPS, CLA_EXPECTED, groupExpr, scopeCond } from '@/lib/portal';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +65,13 @@ export async function GET(request, { params }) {
          GROUP BY u.id, u.name, u.sortable_name ORDER BY courses DESC, u.sortable_name LIMIT 12`),
     ]);
 
+    let expected = null;
+    if (key === 'cla') {
+      const found = await q(`SELECT id, sis_source_id, workflow_state FROM dbo.canvas_courses WHERE sis_source_id = ANY($1) AND workflow_state <> 'deleted'`, [CLA_EXPECTED.map(e => e.sis)]);
+      const bySis = Object.fromEntries(found.rows.map(r => [r.sis_source_id, r]));
+      expected = CLA_EXPECTED.map(e => ({ ...e, found: !!bySis[e.sis], course_id: bySis[e.sis]?.id ?? null }));
+    }
+
     return NextResponse.json({
       scope,
       group: { key, label: def.label, short: def.short, blurb: def.blurb, breakdownTitle: def.breakdownTitle },
@@ -72,6 +79,7 @@ export async function GET(request, { params }) {
       breakdown: breakdown.rows,
       top_courses: topCourses.rows,
       instructors: instructors.rows,
+      expected,
     });
   } catch (err) {
     return NextResponse.json({ error: 'Could not load this group right now.' }, { status: 500 });
