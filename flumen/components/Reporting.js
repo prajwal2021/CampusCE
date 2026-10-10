@@ -66,7 +66,7 @@ export default function Reporting() {
             so they include the test students. {waiting} of {metrics.length} items need CampusCE data and fill in once that access is available.
           </p>
           <p className="text-xs text-zinc-500">
-            Free course used for the funnel{config.free_is_assumed ? ' (assumed, to be confirmed)' : ''}: {config.free_courses.join(', ') || 'none set'}.
+            Free course used for the funnel{config.free_is_assumed ? ' (assumed, to be confirmed)' : ''}: {config.free_courses.join(', ') || 'none set'}. {config.free_note}
             Completion means the Canvas enrollment was concluded. A drop is a deactivated or removed enrollment. A time out is an enrollment
             whose access end date passed before completion.
           </p>

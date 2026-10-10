@@ -53,8 +53,8 @@ export async function GET(request, { params }) {
       people: opts.unavailable ? [] : people(list),
       need: opts.need || null,
     });
-    const rfi = 'The RFI (request for information) list lives in CampusCE, not Canvas.';
-    const ext = 'Extensions are granted in CampusCE and are not visible in Canvas.';
+    const rfi = 'RFIs are not in Canvas, and none of the CampusCE views we can see holds them. The closest are Students.InterestArea and Registrations.MarketingCode. Ask CampusCE where RFIs are stored.';
+    const ext = 'Not recorded in Canvas. In CampusCE it would come from Registrations.AccessEndDate compared with Sections.AccessDays, or from extension fees in FeeDiscount. Needs CampusCE view access.';
 
     const metrics = [
       m('free_signups', 'Free course', 'Free course sign-ups', free, 'People enrolled in the free course.'),
@@ -85,6 +85,7 @@ export async function GET(request, { params }) {
       config: {
         free_courses: CLA_FREE_SKUS.map(name),
         free_is_assumed: true,
+        free_note: 'Canvas has no free or paid flag. In CampusCE a free course is one with tuition of $0 (Sections.Tuition), which needs CampusCE view access, so the free course is set by hand for now.',
         enrollments_counted: rows.length,
       },
     });
