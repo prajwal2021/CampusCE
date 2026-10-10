@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Reporting from '@/components/Reporting';
+import clsx from 'clsx';
 import { ArrowRight } from 'lucide-react';
 import {
   useFetch, Loading, ErrorBox, PageShell, Crumbs, Metric, Panel, Table, StatusBadge,
@@ -10,6 +13,14 @@ import {
 
 export default function GroupPage() {
   const { key } = useParams();
+  const [view, setView] = useState('overview');
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('view') === 'reporting') setView('reporting'); }, []);
+  const switchView = (v) => {
+    setView(v);
+    const u = new URL(window.location.href);
+    v === 'reporting' ? u.searchParams.set('view', 'reporting') : u.searchParams.delete('view');
+    window.history.replaceState(null, '', u);
+  };
   const { data, error, loading } = useFetch(`/portal/group/${key}`);
 
   if (loading) return <Loading />;
@@ -27,10 +38,24 @@ export default function GroupPage() {
     <PageShell>
       <div className="space-y-2">
         <Crumbs items={[{ label: 'Overview', href: '/' }, { label: 'Programs', href: '/programs' }, { label: g.label }]} />
-        <h1 className="text-2xl font-semibold text-zinc-100">{g.label}</h1>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <h1 className="text-2xl font-semibold text-zinc-100">{g.label}</h1>
+          {g.key === 'cla' && (
+            <div className="flex items-center rounded-lg border border-surface-4 bg-surface-2 p-0.5" role="group" aria-label="Dashboard view">
+              {[{ v: 'overview', label: 'Overview' }, { v: 'reporting', label: 'Reporting' }].map(o => (
+                <button key={o.v} onClick={() => switchView(o.v)} aria-pressed={view === o.v}
+                  className={clsx('px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
+                    view === o.v ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-200')}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <p className="text-sm text-zinc-500">{g.blurb}</p>
       </div>
 
+      {view === 'reporting' && g.key === 'cla' ? <Reporting /> : (<>
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
         <Metric label="Courses" value={fmtNum(m.courses)} sub={`${fmtNum(m.courses_published)} published`} href={`/browse/courses${q}`} />
         <Metric label="Students" value={fmtNum(m.students)} sub={`${fmtNum(m.students_active)} active`} href={`/browse/students${q}`} />
@@ -98,6 +123,7 @@ export default function GroupPage() {
           />
         </Panel>
       </div>
+      </>)}
     </PageShell>
   );
 }

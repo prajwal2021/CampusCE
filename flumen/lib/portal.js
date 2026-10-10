@@ -214,3 +214,11 @@ export const CLA_EXPECTED = [
   { sis: '905.100.OPEN', canvas_id: 1682, name: 'Leadership for the Workplace: Skilled Collaboration (CLASC-01)', kind: 'Short course' },
   { sis: '906.100.OPEN', canvas_id: 1684, name: 'Leadership for the Workplace: Leadership as Service (CLASC-01)', kind: 'Short course' },
 ];
+
+/**
+ * How the Career Learning Academy reporting view classifies the seven offerings.
+ * FREE is an assumption (the first short course) until the program team confirms which course is free.
+ */
+export const CLA_FREE_SKUS = ['901.100.OPEN'];
+export const CLA_MC_SKUS = ['900.100.OPEN'];
+export const CLA_CAREER_SKUS = []; // no career certificate courses exist yet
