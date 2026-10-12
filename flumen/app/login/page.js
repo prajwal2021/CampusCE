@@ -9,13 +9,15 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 function LoginForm() {
   const params = useSearchParams();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const username = String(fd.get('username') || '').trim();
+    const password = String(fd.get('password') || '');
+    if (!username || !password) { setError('Enter your username and password.'); return; }
     setBusy(true);
     setError(null);
     try {
@@ -45,20 +47,20 @@ function LoginForm() {
         <label htmlFor="username" className="text-xs font-medium text-zinc-400">Username</label>
         <div className="relative">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-          <input id="username" type="text" autoFocus autoComplete="username" autoCapitalize="none"
-            value={username} onChange={e => setUsername(e.target.value)} className={field} />
+          <input id="username" name="username" type="text" autoFocus autoComplete="username" autoCapitalize="none"
+            className={field} />
         </div>
       </div>
       <div className="space-y-1.5">
         <label htmlFor="password" className="text-xs font-medium text-zinc-400">Password</label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-          <input id="password" type="password" autoComplete="current-password"
-            value={password} onChange={e => setPassword(e.target.value)} className={field} />
+          <input id="password" name="password" type="password" autoComplete="current-password"
+            className={field} />
         </div>
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
-      <button type="submit" disabled={busy || !username || !password} className="btn-primary w-full justify-center">
+      <button type="submit" disabled={busy} className="btn-primary w-full justify-center">
         {busy && <Loader2 className="w-4 h-4 animate-spin" />}
         Sign in
       </button>
