@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { CLA_EXPECTED, CLA_FREE_SKUS, CLA_MC_SKUS, CLA_CAREER_SKUS } from '@/lib/portal';
+import { CLA_EXPECTED, CLA_FREE_SKUS, CLA_MC_SKUS, CLA_CAREER_SKUS, CLA_TRACKS, trackOfSku } from '@/lib/portal';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +47,7 @@ export async function GET(request, { params }) {
     const drops = rows.filter(r => r.dropped);
 
     /* ---- free vs paid layer ---- */
-    const SIX = CLA_EXPECTED.filter(e => e.kind === 'Short course').map(e => e.sis);
+    const shortOf = t => CLA_EXPECTED.filter(e => e.track === t.key && e.kind === 'Short course').map(e => e.sis);
     const live = rows.filter(r => r.state !== 'deleted');
     const byUser = new Map();
     for (const r of live) {
@@ -58,19 +58,31 @@ export async function GET(request, { params }) {
       const f = u.rows.find(r => r.free);
       const paid = u.rows.filter(r => !r.free);
       const mcRow = u.rows.find(r => r.mc);
-      const sixDone = SIX.filter(s => u.rows.some(r => r.sis === s && r.done)).length;
-      const paidAfterFree = f ? paid.filter(p => new Date(p.created_at).getTime() >= new Date(f.created_at).getTime()) : [];
+      const firstFree = u.rows.filter(r => r.free).sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+      const paidAfterFree = firstFree ? paid.filter(p => new Date(p.created_at).getTime() >= new Date(firstFree.created_at).getTime()) : [];
+      const done = {};
+      for (const t of CLA_TRACKS) {
+        const six = shortOf(t);
+        done[t.key] = six.filter(s => u.rows.some(r => r.sis === s && r.done)).length;
+      }
       return {
         user_id: u.user_id, name: u.name,
-        free: f ? (f.done ? 'Completed' : 'Enrolled') : 'No',
+        free: f ? (u.rows.some(r => r.free && r.done) ? 'Completed' : 'Enrolled') : 'No',
         paid_enrolled: paid.length,
         paid_completed: paid.filter(p => p.done).length,
-        short_done: sixDone,
-        microcert: mcRow ? (mcRow.done ? 'Completed' : 'Enrolled') : 'No',
+        done,
+        microcert: mcRow ? (u.rows.some(r => r.mc && r.done) ? 'Completed' : 'Enrolled') : 'No',
         took_free_then_paid: !!f && paidAfterFree.length > 0,
         free_only: !!f && paid.length === 0,
         paid_no_free: !f && paid.length > 0,
-        all_six: sixDone === SIX.length && SIX.length > 0,
+        all_six: Object.fromEntries(CLA_TRACKS.map(t => [t.key, shortOf(t).length > 0 && done[t.key] === shortOf(t).length])),
+        // per track: free course taken, and any paid course in the same track
+        track: Object.fromEntries(CLA_TRACKS.map(t => {
+          const inT = u.rows.filter(r => trackOfSku(r.sis)?.key === t.key);
+          const tf = inT.some(r => r.free);
+          const tp = inT.some(r => !r.free);
+          return [t.key, { free: tf, paid: tp }];
+        })),
       };
     }).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -82,14 +94,27 @@ export async function GET(request, { params }) {
       seg('free_only', 'Free course only', 'Enrolled in the free course and in no paid course.', l => l.free_only),
       seg('free_then_paid', 'Free course, then a paid course', 'Enrolled in the free course, then enrolled in at least one paid course.', l => l.took_free_then_paid),
       seg('paid_no_free', 'Paid course without the free course', 'Went straight to a paid course.', l => l.paid_no_free),
-      seg('all_six', 'Completed all 6 leadership short courses', `Concluded all ${SIX.length} short courses.`, l => l.all_six),
+      ...CLA_TRACKS.map(t => seg(`all_six_${t.key}`, `Completed all 6 ${t.label.split(' for ')[0]} short courses`, `Concluded all six ${t.label} short courses.`, l => l.all_six[t.key])),
     ];
+    const trackStats = CLA_TRACKS.map(t => {
+      const ls = learners.filter(l => l.track[t.key].free || l.track[t.key].paid);
+      const freeL = learners.filter(l => l.track[t.key].free);
+      return {
+        key: t.key, label: t.label,
+        learners: ls.length,
+        free_learners: freeL.length,
+        free_then_paid: freeL.filter(l => l.track[t.key].paid).length,
+        free_only: freeL.filter(l => !l.track[t.key].paid).length,
+        paid_no_free: ls.filter(l => !l.track[t.key].free).length,
+        completed_all_six: learners.filter(l => l.all_six[t.key]).length,
+      };
+    });
 
     const courseStats = CLA_EXPECTED.map(e => {
       const rs = rows.filter(r => r.sis === e.sis);
       const liveRs = rs.filter(r => r.state !== 'deleted');
       return {
-        sis: e.sis, name: e.name, kind: e.kind,
+        sis: e.sis, name: e.name, kind: e.kind, track: e.track,
         pricing: CLA_FREE_SKUS.includes(e.sis) ? 'Free' : 'Paid',
         enrolled: liveRs.length,
         completed: liveRs.filter(r => r.done).length,
@@ -147,12 +172,12 @@ export async function GET(request, { params }) {
 
     const name = sis => CLA_EXPECTED.find(e => e.sis === sis)?.name || sis;
     return NextResponse.json({
-      funnel, segments, courseStats, pricing, learners,
+      funnel, segments, trackStats, courseStats, pricing, learners,
       metrics,
       config: {
         free_courses: CLA_FREE_SKUS.map(name),
         free_is_assumed: false,
-        free_note: 'Confirmed by the program team. Canvas has no free or paid flag, so this is set by hand; CampusCE would mark it as tuition of $0 once view access is available.',
+        free_note: 'Free courses, as confirmed by the program team: Putting Your People First, Leadership as Service, Introduction to AI and The Big Picture (Communication). Canvas has no free or paid flag, so this is set by hand; CampusCE would mark it as tuition of $0 once view access is available.',
         enrollments_counted: rows.length,
       },
     });

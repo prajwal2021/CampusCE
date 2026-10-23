@@ -18,9 +18,9 @@ export const GROUPS = {
   cla: {
     label: 'Career Learning Academy (new)',
     short: 'CLA',
-    blurb: 'The new open-enrollment Leadership for the Workplace offerings created in CampusCE: one microcertificate and six short courses.',
-    breakdownTitle: 'By offering',
-    breakdown: `CASE WHEN c.sis_source_id LIKE '900.%' THEN 'Microcertificate (CLAMC)' ELSE 'Short course (CLASC)' END`,
+    blurb: 'The new open-enrollment Career Learning Academy offerings created in CampusCE: Leadership, Technical Skills and Communication, each a microcertificate plus six short courses.',
+    breakdownTitle: 'By track',
+    breakdown: `CASE substr(c.sis_source_id, 2, 1) WHEN '0' THEN 'Leadership' WHEN '1' THEN 'Technical Skills' ELSE 'Communication' END`,
   },
   mc: {
     label: 'Microcertificates',
@@ -46,7 +46,7 @@ export const GROUPS = {
 };
 
 export const groupExpr = (a = 'c') => `CASE
-  WHEN ${a}.sis_source_id ~ '^90[0-6][.]100[.]OPEN$' THEN 'cla'
+  WHEN ${a}.sis_source_id ~ '^9(0[0-6]|1[0-6]|2[0-6])[.]100[.]OPEN$' THEN 'cla'
   WHEN ${a}.name ~* '-MC[0-9]+([^0-9]|$)' OR ${a}.account_desc = '10K' THEN 'mc'
   WHEN ${a}.account_desc = 'CCFCS' OR ${a}.name ~* '^CCFCS' THEN 'ccfcs'
   ELSE 'other' END`;
@@ -204,21 +204,43 @@ export const TYPES = {
 
 export const escapeLike = s => s.replace(/[\\%_]/g, m => '\\' + m);
 
-/** The Career Learning Academy offerings announced by the section coordinator (SIS id = CampusCE SKU). */
+/**
+ * Career Learning Academy offerings created in CampusCE. The SIS id is the CampusCE SKU:
+ * 90x Leadership, 91x Technical Skills, 92x Communication; x0 is the microcertificate, x1 to x6 the short courses.
+ */
+export const CLA_TRACKS = [
+  { key: 'leadership', label: 'Leadership for the Workplace', digit: '0' },
+  { key: 'technical', label: 'Technical Skills for the Workplace', digit: '1' },
+  { key: 'communication', label: 'Communication for the Workplace', digit: '2' },
+];
+export const trackOfSku = sis => CLA_TRACKS.find(t => t.digit === String(sis)[1]) || null;
+
+const E = (sis, canvas_id, name) => ({ sis, canvas_id, name, kind: sis[2] === '0' ? 'Microcertificate' : 'Short course', track: trackOfSku(sis).key });
 export const CLA_EXPECTED = [
-  { sis: '900.100.OPEN', canvas_id: 1678, name: 'Leadership for the Workplace (CLAMC-01)', kind: 'Microcertificate' },
-  { sis: '901.100.OPEN', canvas_id: 1683, name: 'Leadership for the Workplace: Putting Your People First (CLASC-01)', kind: 'Short course' },
-  { sis: '902.100.OPEN', canvas_id: 1679, name: 'Leadership for the Workplace: The Role of Foresight (CLASC-01)', kind: 'Short course' },
-  { sis: '903.100.OPEN', canvas_id: 1680, name: 'Leadership for the Workplace: The Role of Character (CLASC-01)', kind: 'Short course' },
-  { sis: '904.100.OPEN', canvas_id: 1681, name: 'Leadership for the Workplace: The Leadership Triangle (CLASC-01)', kind: 'Short course' },
-  { sis: '905.100.OPEN', canvas_id: 1682, name: 'Leadership for the Workplace: Skilled Collaboration (CLASC-01)', kind: 'Short course' },
-  { sis: '906.100.OPEN', canvas_id: 1684, name: 'Leadership for the Workplace: Leadership as Service (CLASC-01)', kind: 'Short course' },
+  E('900.100.OPEN', 1678, 'Leadership for the Workplace (CLAMC-01)'),
+  E('901.100.OPEN', 1683, 'Leadership for the Workplace: Putting Your People First'),
+  E('902.100.OPEN', 1679, 'Leadership for the Workplace: The Role of Foresight'),
+  E('903.100.OPEN', 1680, 'Leadership for the Workplace: The Role of Character'),
+  E('904.100.OPEN', 1681, 'Leadership for the Workplace: The Leadership Triangle'),
+  E('905.100.OPEN', 1682, 'Leadership for the Workplace: Skilled Collaboration'),
+  E('906.100.OPEN', 1684, 'Leadership for the Workplace: Leadership as Service'),
+  E('910.100.OPEN', 1690, 'Technical Skills for the Workplace: AI (CLAMC-01)'),
+  E('911.100.OPEN', 1685, 'Technical Skills for the Workplace: Introduction to AI'),
+  E('912.100.OPEN', 1686, 'Technical Skills for the Workplace: AI in the Workplace'),
+  E('913.100.OPEN', 1691, 'Technical Skills for the Workplace: Advanced AI in the Workplace'),
+  E('914.100.OPEN', 1687, 'Technical Skills for the Workplace: Applications for AI in Business'),
+  E('915.100.OPEN', 1692, 'Technical Skills for the Workplace: Advanced AI Applications in Business'),
+  E('916.100.OPEN', 1689, 'Technical Skills for the Workplace: Coding With AI'),
+  E('920.100.OPEN', 1699, 'Communication for the Workplace (CLAMC-01)'),
+  E('921.100.OPEN', 1694, 'Communication for the Workplace: The Big Picture: Good Communication is Good for Business'),
+  E('922.100.OPEN', 1693, 'Communication for the Workplace: Workplace writing and what makes it work'),
+  E('923.100.OPEN', 1695, 'Communication for the Workplace: Speaking on the job'),
+  E('924.100.OPEN', 1696, 'Communication for the Workplace: Communicating with a team'),
+  E('925.100.OPEN', 1697, 'Communication for the Workplace: Communicating with clients, customers, and partners'),
+  E('926.100.OPEN', 1698, 'Communication for the Workplace: Navigating the tricky parts'),
 ];
 
-/**
- * How the Career Learning Academy reporting view classifies the seven offerings.
- * The free course (Putting Your People First) was confirmed by the program team.
- */
-export const CLA_FREE_SKUS = ['901.100.OPEN']; // Putting Your People First, confirmed free
-export const CLA_MC_SKUS = ['900.100.OPEN'];
+/** Free courses, as confirmed by the program team. Everything else is paid. */
+export const CLA_FREE_SKUS = ['901.100.OPEN', '906.100.OPEN', '911.100.OPEN', '921.100.OPEN'];
+export const CLA_MC_SKUS = CLA_EXPECTED.filter(e => e.kind === 'Microcertificate').map(e => e.sis);
 export const CLA_CAREER_SKUS = []; // no career certificate courses exist yet

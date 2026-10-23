@@ -76,7 +76,7 @@ function Th({ children, num }) {
 const td = 'px-4 py-2.5 border-b border-surface-3 text-zinc-300';
 
 function FreeVsPaid({ data }) {
-  const { funnel: f, segments, courseStats, pricing, learners } = data;
+  const { funnel: f, segments, trackStats, courseStats, pricing, learners } = data;
   const badge = v => <span className={v === 'Completed' ? 'badge-ok' : v === 'Enrolled' ? 'badge-info' : 'text-zinc-600'}>{v}</span>;
   return (
     <div className="space-y-6">
@@ -90,6 +90,28 @@ function FreeVsPaid({ data }) {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {segments.map(s => <Segment key={s.key} s={s} />)}
+        </div>
+      </section>
+
+      <section className="card p-0 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-surface-4"><h2 className="text-sm font-medium text-zinc-200">By track</h2></div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr><Th>Track</Th><Th num>Learners</Th><Th num>Took free course</Th><Th num>Free, then paid</Th><Th num>Free only</Th><Th num>Paid without free</Th><Th num>Completed all 6</Th></tr></thead>
+            <tbody>
+              {trackStats.map(t => (
+                <tr key={t.key} className="hover:bg-surface-3/40">
+                  <td className={td}>{t.label}</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{fmtNum(t.learners)}</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{fmtNum(t.free_learners)}</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{fmtNum(t.free_then_paid)}</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{fmtNum(t.free_only)}</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{fmtNum(t.paid_no_free)}</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{fmtNum(t.completed_all_six)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -142,16 +164,18 @@ function FreeVsPaid({ data }) {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr><Th>Learner</Th><Th>Free course</Th><Th num>Paid enrolled</Th><Th num>Paid completed</Th><Th num>Short courses done (of 6)</Th><Th>Microcertificate</Th></tr></thead>
+            <thead><tr><Th>Learner</Th><Th>Free course</Th><Th num>Paid enrolled</Th><Th num>Paid completed</Th><Th num>Leadership (of 6)</Th><Th num>Technical (of 6)</Th><Th num>Communication (of 6)</Th><Th>Microcertificate</Th></tr></thead>
             <tbody>
-              {learners.length === 0 && <tr><td colSpan={6} className="px-5 py-10 text-center text-zinc-500">No learners yet.</td></tr>}
+              {learners.length === 0 && <tr><td colSpan={8} className="px-5 py-10 text-center text-zinc-500">No learners yet.</td></tr>}
               {learners.map(l => (
                 <tr key={l.user_id} className="hover:bg-surface-3/40">
                   <td className={td}><Link href={`/person/${l.user_id}`} className={linkCls}>{l.name}</Link></td>
                   <td className={td}>{badge(l.free)}</td>
                   <td className={clsx(td, 'text-right tabular-nums')}>{l.paid_enrolled}</td>
                   <td className={clsx(td, 'text-right tabular-nums')}>{l.paid_completed}</td>
-                  <td className={clsx(td, 'text-right tabular-nums')}>{l.short_done} / 6</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{l.done.leadership} / 6</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{l.done.technical} / 6</td>
+                  <td className={clsx(td, 'text-right tabular-nums')}>{l.done.communication} / 6</td>
                   <td className={td}>{badge(l.microcert)}</td>
                 </tr>
               ))}
