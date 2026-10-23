@@ -151,8 +151,8 @@ export async function GET(request, { params }) {
       metrics,
       config: {
         free_courses: CLA_FREE_SKUS.map(name),
-        free_is_assumed: true,
-        free_note: 'Canvas has no free or paid flag. In CampusCE a free course is one with tuition of $0 (Sections.Tuition), which needs CampusCE view access, so the free course is set by hand for now.',
+        free_is_assumed: false,
+        free_note: 'Confirmed by the program team. Canvas has no free or paid flag, so this is set by hand; CampusCE would mark it as tuition of $0 once view access is available.',
         enrollments_counted: rows.length,
       },
     });

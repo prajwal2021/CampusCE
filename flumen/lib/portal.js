@@ -217,8 +217,8 @@ export const CLA_EXPECTED = [
 
 /**
  * How the Career Learning Academy reporting view classifies the seven offerings.
- * FREE is an assumption (the first short course) until the program team confirms which course is free.
+ * The free course (Putting Your People First) was confirmed by the program team.
  */
-export const CLA_FREE_SKUS = ['901.100.OPEN'];
+export const CLA_FREE_SKUS = ['901.100.OPEN']; // Putting Your People First, confirmed free
 export const CLA_MC_SKUS = ['900.100.OPEN'];
 export const CLA_CAREER_SKUS = []; // no career certificate courses exist yet
