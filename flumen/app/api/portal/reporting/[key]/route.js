@@ -46,6 +46,72 @@ export async function GET(request, { params }) {
     const timedOut = hasEndDates ? rows.filter(r => !r.done && r.end_at && new Date(r.end_at).getTime() < now) : [];
     const drops = rows.filter(r => r.dropped);
 
+    /* ---- free vs paid layer ---- */
+    const SIX = CLA_EXPECTED.filter(e => e.kind === 'Short course').map(e => e.sis);
+    const live = rows.filter(r => r.state !== 'deleted');
+    const byUser = new Map();
+    for (const r of live) {
+      if (!byUser.has(r.user_id)) byUser.set(r.user_id, { user_id: r.user_id, name: r.name, rows: [] });
+      byUser.get(r.user_id).rows.push(r);
+    }
+    const learners = [...byUser.values()].map(u => {
+      const f = u.rows.find(r => r.free);
+      const paid = u.rows.filter(r => !r.free);
+      const mcRow = u.rows.find(r => r.mc);
+      const sixDone = SIX.filter(s => u.rows.some(r => r.sis === s && r.done)).length;
+      const paidAfterFree = f ? paid.filter(p => new Date(p.created_at).getTime() >= new Date(f.created_at).getTime()) : [];
+      return {
+        user_id: u.user_id, name: u.name,
+        free: f ? (f.done ? 'Completed' : 'Enrolled') : 'No',
+        paid_enrolled: paid.length,
+        paid_completed: paid.filter(p => p.done).length,
+        short_done: sixDone,
+        microcert: mcRow ? (mcRow.done ? 'Completed' : 'Enrolled') : 'No',
+        took_free_then_paid: !!f && paidAfterFree.length > 0,
+        free_only: !!f && paid.length === 0,
+        paid_no_free: !f && paid.length > 0,
+        all_six: sixDone === SIX.length && SIX.length > 0,
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+
+    const seg = (key, label, note, pred) => {
+      const list = learners.filter(pred);
+      return { key, label, note, count: list.length, people: list.map(l => ({ user_id: l.user_id, name: l.name })).slice(0, 300) };
+    };
+    const segments = [
+      seg('free_only', 'Free course only', 'Enrolled in the free course and in no paid course.', l => l.free_only),
+      seg('free_then_paid', 'Free course, then a paid course', 'Enrolled in the free course, then enrolled in at least one paid course.', l => l.took_free_then_paid),
+      seg('paid_no_free', 'Paid course without the free course', 'Went straight to a paid course.', l => l.paid_no_free),
+      seg('all_six', 'Completed all 6 leadership short courses', `Concluded all ${SIX.length} short courses.`, l => l.all_six),
+    ];
+
+    const courseStats = CLA_EXPECTED.map(e => {
+      const rs = rows.filter(r => r.sis === e.sis);
+      const liveRs = rs.filter(r => r.state !== 'deleted');
+      return {
+        sis: e.sis, name: e.name, kind: e.kind,
+        pricing: CLA_FREE_SKUS.includes(e.sis) ? 'Free' : 'Paid',
+        enrolled: liveRs.length,
+        completed: liveRs.filter(r => r.done).length,
+        in_progress: liveRs.filter(r => !r.done && r.state === 'active').length,
+        dropped: rs.filter(r => r.dropped).length,
+      };
+    });
+    const sum = (list, k) => list.reduce((s, c) => s + c[k], 0);
+    const pricing = ['Free', 'Paid'].map(p => {
+      const cs = courseStats.filter(c => c.pricing === p);
+      return { pricing: p, courses: cs.length, enrolled: sum(cs, 'enrolled'), completed: sum(cs, 'completed'), in_progress: sum(cs, 'in_progress'), dropped: sum(cs, 'dropped') };
+    });
+    const freeLearners = learners.filter(l => l.free !== 'No').length;
+    const funnel = {
+      free_learners: freeLearners,
+      free_completed: learners.filter(l => l.free === 'Completed').length,
+      free_then_paid: segments[1].count,
+      free_only: segments[0].count,
+      rate_free_to_paid: freeLearners ? Math.round((100 * segments[1].count) / freeLearners) : null,
+      total_learners: learners.length,
+    };
+
     const m = (key, group, label, list, note, opts = {}) => ({
       key, group, label, note,
       status: opts.unavailable ? 'needs_campusce' : 'canvas',
@@ -81,6 +147,7 @@ export async function GET(request, { params }) {
 
     const name = sis => CLA_EXPECTED.find(e => e.sis === sis)?.name || sis;
     return NextResponse.json({
+      funnel, segments, courseStats, pricing, learners,
       metrics,
       config: {
         free_courses: CLA_FREE_SKUS.map(name),
