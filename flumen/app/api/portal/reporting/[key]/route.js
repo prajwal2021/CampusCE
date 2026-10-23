@@ -177,8 +177,8 @@ export async function GET(request, { params }) {
 
     const SRC = { free_signups: 'CampusCE', conv_additional: 'CampusCE', conv_mc: 'CampusCE', conv_career: 'CampusCE', rfi_count: 'Smartsheet', rfi_conv: 'Smartsheet', ext_granted: 'CampusCE', ext_completed: 'CampusCE', ext_timedout: 'CampusCE', unpaid_enrolled: 'CampusCE', paid_enrolled: 'CampusCE', pay_trend: 'CampusCE' };
     const NEED = {
-      rfi_count: 'RFIs are logged in the team's Smartsheet RFI sheet. Needs a read-only Smartsheet token or an export of the sheet.',
-      rfi_conv: 'RFIs are logged in the team's Smartsheet RFI sheet. Matching each RFI to an enrollment needs a person column (such as email) in the sheet.',
+      rfi_count: 'RFIs are logged in the Smartsheet RFI sheet. Needs a read-only Smartsheet token or an export of the sheet.',
+      rfi_conv: 'RFIs are logged in the Smartsheet RFI sheet. Matching each RFI to an enrollment needs a person column (such as email) in the sheet.',
       ext_granted: 'Extensions arrive by call or email to the Career Learning Academy inbox and David extends the course in CampusCE, so they are not visible in Canvas. Needs CampusCE view access (access end date changes).',
       ext_completed: 'Same source as extensions granted: CampusCE access end dates. Needs CampusCE view access.',
       ext_timedout: 'Same source as extensions granted: CampusCE access end dates. Needs CampusCE view access.',
