@@ -65,6 +65,21 @@ export async function GET(request, { params }) {
          GROUP BY u.id, u.name, u.sortable_name ORDER BY courses DESC, u.sortable_name LIMIT 12`),
     ]);
 
+    let shortStats = null;
+    if (key === 'cla') {
+      const s = await q(`WITH en AS (
+          SELECT e.user_id, e.course_id, bool_or(e.workflow_state = 'completed' OR e.completed_at IS NOT NULL) AS done
+          FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
+          WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected')
+            AND substr(c.sis_source_id, 3, 1) <> '0'
+          GROUP BY e.user_id, e.course_id),
+        per AS (SELECT user_id, count(*) AS enrolled, count(*) FILTER (WHERE done) AS completed FROM en GROUP BY user_id)
+        SELECT coalesce((SELECT count(*) FROM en WHERE done), 0) AS short_completed,
+               coalesce((SELECT count(*) FROM en), 0) AS short_enrolled,
+               (SELECT round(avg(100.0 * completed / enrolled)) FROM per) AS avg_short_pct`);
+      shortStats = s.rows[0];
+    }
+
     let expected = null;
     if (key === 'cla') {
       const found = await q(`SELECT id, sis_source_id, workflow_state FROM dbo.canvas_courses WHERE sis_source_id = ANY($1) AND workflow_state <> 'deleted'`, [CLA_EXPECTED.map(e => e.sis)]);
@@ -75,7 +90,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       scope,
       group: { key, label: def.label, short: def.short, blurb: def.blurb, breakdownTitle: def.breakdownTitle },
-      metrics: { ...counts.rows[0], avg_completion_pct: completion.rows[0]?.avg_completion_pct ?? null },
+      metrics: { ...counts.rows[0], avg_completion_pct: shortStats ? (shortStats.avg_short_pct ?? null) : (completion.rows[0]?.avg_completion_pct ?? null), ...(shortStats ? { short_completed: shortStats.short_completed, short_enrolled: shortStats.short_enrolled } : {}) },
       breakdown: breakdown.rows,
       top_courses: topCourses.rows,
       instructors: instructors.rows,

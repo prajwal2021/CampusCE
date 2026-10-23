@@ -62,8 +62,10 @@ export default function GroupPage() {
         <Metric label="Instructors" value={fmtNum(m.instructors)} href={`/browse/instructors${q}`} />
         <Metric label="Sections" value={fmtNum(m.sections)} href={`/browse/sections${q}`} />
         <Metric label="Enrollments" value={fmtNum(m.enrollments)} href={`/browse/enrollments${q}`} />
-        <Metric label="Assignments" value={fmtNum(m.assignments)} sub="Published" href={`/browse/assignments${q}`} />
-        <Metric label="Avg completion" value={fmtPct(m.avg_completion_pct)} sub="Active students" />
+        {g.key === 'cla'
+          ? <Metric label="Short courses completed" value={fmtNum(m.short_completed)} sub={`of ${fmtNum(m.short_enrolled)} short-course enrollments`} href={`/browse/enrollments${q}`} />
+          : <Metric label="Assignments" value={fmtNum(m.assignments)} sub="Published" href={`/browse/assignments${q}`} />}
+        <Metric label="Avg completion" value={fmtPct(m.avg_completion_pct)} sub={g.key === 'cla' ? 'Short courses completed, per learner' : 'Active students'} />
       </div>
 
       {expected && (
