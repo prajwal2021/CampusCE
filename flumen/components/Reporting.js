@@ -6,9 +6,10 @@ import { ChevronDown, Info } from 'lucide-react';
 import clsx from 'clsx';
 import { useFetch, Loading, ErrorBox, fmtNum, linkCls } from '@/components/portal';
 
-const GROUP_ORDER = ['Free course', 'Interest', 'Completions', 'Retention'];
+const GROUP_ORDER = ['Free course', 'Payments', 'Interest', 'Completions', 'Retention'];
 const GROUP_BLURB = {
   'Free course': 'How the free course turns into further enrollments.',
+  Payments: 'Who has enrolled but not paid yet, including cheques recorded by staff.',
   Interest: 'People who asked for information.',
   Completions: 'Who finished what.',
   Retention: 'Drops, time outs and extensions.',
@@ -203,7 +204,7 @@ export default function Reporting() {
         <div className="space-y-1">
           <p>
             These numbers come from {fmtNum(config.enrollments_counted)} Canvas enrollments in the {fmtNum(data.courseStats.length)} Career Learning Academy courses,
-            and today they are all test accounts, not real learners. {waiting} of the {metrics.length} measures (RFIs and extensions) are not stored in Canvas, so they stay blank until we can read CampusCE.
+            and today they are all test accounts, not real learners. {waiting} of the {metrics.length} measures (RFIs, extensions and payments) are not stored in Canvas, so they stay blank until we can read CampusCE.
           </p>
           <p className="text-xs text-zinc-500">
             Free course used for the funnel{config.free_is_assumed ? ' (assumed, to be confirmed)' : ''}: {config.free_courses.join(', ') || 'none set'}. {config.free_note}

@@ -147,7 +147,12 @@ export async function GET(request, { params }) {
     const rfi = 'RFIs are not in Canvas, and none of the CampusCE views we can see holds them. The closest are Students.InterestArea and Registrations.MarketingCode. Ask CampusCE where RFIs are stored.';
     const ext = 'Not recorded in Canvas. In CampusCE it would come from Registrations.AccessEndDate compared with Sections.AccessDays, or from extension fees in FeeDiscount. Needs CampusCE view access.';
 
+    const pay = 'Payment status is recorded in CampusCE, including cheques that staff mark as paid. Canvas has no payment data. It would come from the Orders view (OrderStatus, BalanceDue, TotalPaid) and Transactions (PayType, PayStatus, PaidDate). Needs CampusCE view access.';
+
     const metrics = [
+      m('unpaid_enrolled', 'Payments', 'Enrolled but not yet paid', [], 'People enrolled in a paid course whose order still has a balance due.', { unavailable: true, need: pay }),
+      m('paid_enrolled', 'Payments', 'Enrolled and paid', [], 'People enrolled in a paid course whose order is paid in full, by card or cheque.', { unavailable: true, need: pay }),
+      m('pay_trend', 'Payments', 'Enrollment and payment trend', [], 'Enrollments and payments per week, so a gap between the two is visible at a glance.', { unavailable: true, need: pay }),
       m('free_signups', 'Free course', 'Free course sign-ups', free, 'People enrolled in the free course.'),
       m('free_completions', 'Free course', 'Free course completions', freeDone, 'People who finished the free course.'),
       m('conv_additional', 'Free course', 'Free course conversions: additional course', convertedTo(() => true), 'Finished the free course, then signed up for another course.'),
