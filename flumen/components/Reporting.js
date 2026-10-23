@@ -202,8 +202,8 @@ export default function Reporting() {
         <Info className="w-4 h-4 text-accent shrink-0 mt-0.5" />
         <div className="space-y-1">
           <p>
-            Counts are calculated from {fmtNum(config.enrollments_counted)} Canvas enrollments in the seven Career Learning Academy courses,
-            so they include the test students. {waiting} of {metrics.length} items need CampusCE data and fill in once that access is available.
+            These numbers come from {fmtNum(config.enrollments_counted)} Canvas enrollments in the {fmtNum(data.courseStats.length)} Career Learning Academy courses,
+            and today they are all test accounts, not real learners. {waiting} of the {metrics.length} measures (RFIs and extensions) are not stored in Canvas, so they stay blank until we can read CampusCE.
           </p>
           <p className="text-xs text-zinc-500">
             Free course used for the funnel{config.free_is_assumed ? ' (assumed, to be confirmed)' : ''}: {config.free_courses.join(', ') || 'none set'}. {config.free_note}
