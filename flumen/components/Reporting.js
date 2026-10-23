@@ -24,10 +24,10 @@ function Tile({ m }) {
     <div className={clsx('card-sm flex flex-col', waiting && 'border-dashed')}>
       <p className="text-xs font-medium text-zinc-400 leading-snug min-h-[2rem]">{m.label}</p>
       <p className={clsx('metric-value mt-1', waiting && 'text-zinc-600')}>{waiting ? '—' : fmtNum(m.value)}</p>
-      <p className="text-xs text-zinc-500 mt-1.5 flex-1">{waiting ? m.need : m.note}</p>
+      <p className="text-xs text-zinc-500 mt-1.5 flex-1">{waiting ? m.need : m.note}{m.interim ? ` Source of record: ${m.source}.` : ''}</p>
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className={waiting ? 'badge-warn' : 'badge-ok'}>{waiting ? 'Needs CampusCE data' : 'From Canvas'}</span>
+        <span className={waiting || m.interim ? 'badge-warn' : 'badge-ok'} title={m.interim ? `Will move to ${m.source} once we can read it` : undefined}>{waiting ? `Needs ${m.source}` : m.interim ? 'Interim: from Canvas' : 'From Canvas'}</span>
         {canOpen && (
           <button onClick={() => setOpen(o => !o)} className="text-xs text-accent hover:underline inline-flex items-center gap-1" aria-expanded={open}>
             {open ? 'Hide' : 'Show'} people <ChevronDown className={clsx('w-3 h-3 transition-transform', open && 'rotate-180')} />
@@ -204,7 +204,7 @@ export default function Reporting() {
         <div className="space-y-1">
           <p>
             These numbers come from {fmtNum(config.enrollments_counted)} Canvas enrollments in the {fmtNum(data.courseStats.length)} Career Learning Academy courses,
-            and today they are all test accounts, not real learners. {waiting} of the {metrics.length} measures (RFIs, extensions and payments) are not stored in Canvas, so they stay blank until we can read CampusCE.
+            and today they are all test accounts, not real learners. {waiting} of the {metrics.length} measures (RFIs, extensions and payments) cannot be filled yet because they live in Smartsheet or CampusCE. Free sign-ups and the conversions are shown from Canvas for now, marked Interim, until we can read CampusCE.
           </p>
           <p className="text-xs text-zinc-500">
             Free course used for the funnel{config.free_is_assumed ? ' (assumed, to be confirmed)' : ''}: {config.free_courses.join(', ') || 'none set'}. {config.free_note}
