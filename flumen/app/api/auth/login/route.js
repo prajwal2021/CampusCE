@@ -15,6 +15,12 @@ function accounts() {
   if (process.env.VIEWER_USER && process.env.VIEWER_PASSWORD) {
     list.push({ role: 'user', user: process.env.VIEWER_USER, pass: process.env.VIEWER_PASSWORD });
   }
+  // ACCOUNTS="role:username:password;role:username:password" for named accounts
+  for (const entry of (process.env.ACCOUNTS || '').split(';')) {
+    const [role, user, ...rest] = entry.trim().split(':');
+    const pass = rest.join(':');
+    if ((role === 'admin' || role === 'user') && user && pass) list.push({ role, user, pass });
+  }
   return list;
 }
 
@@ -27,7 +33,7 @@ export async function POST(request) {
   const { username, password } = await request.json().catch(() => ({}));
   let role = null;
   for (const a of list) {
-    const ok = typeof username === 'string' && typeof password === 'string' && same(username, a.user) && same(password, a.pass);
+    const ok = typeof username === 'string' && typeof password === 'string' && same(username.trim().toLowerCase(), a.user.toLowerCase()) && same(password, a.pass);
     if (ok) role = a.role;
   }
 
