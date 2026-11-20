@@ -7,6 +7,9 @@ cd "$(dirname "$0")/.."
 ENV_FILE="$HOME/campusce_pipeline/secrets/flumen.env"
 mkdir -p "$(dirname "$ENV_FILE")"
 [ -f "$ENV_FILE" ] || { touch "$ENV_FILE"; chmod 600 "$ENV_FILE"; }
+# Passwords people change in the app (salted hashes), kept outside the container and out of git.
+DATA_DIR="$HOME/campusce_pipeline/data"
+mkdir -p "$DATA_DIR" && chmod 700 "$DATA_DIR"
 
 docker build -q -t flumen .
 docker rm -f flumen >/dev/null 2>&1 || true
@@ -14,5 +17,6 @@ docker run -d --name flumen --restart unless-stopped --memory 512m --network hos
   -e HOSTNAME=0.0.0.0 -e PORT=3100 \
   --env-file "$ENV_FILE" \
   -v "$HOME/.ssh/id_ed25519_ttu:/ssh/id_ed25519_ttu:ro" \
+  -v "$DATA_DIR:/data" \
   flumen
 echo "Flumen is up on port 3100."

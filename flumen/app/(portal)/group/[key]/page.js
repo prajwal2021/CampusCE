@@ -39,13 +39,13 @@ export default function GroupPage() {
       <div className="space-y-2">
         <Crumbs items={[{ label: 'Overview', href: '/' }, { label: 'Programs', href: '/programs' }, { label: g.label }]} />
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-semibold text-zinc-100">{g.label}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{g.label}</h1>
           {g.key === 'cla' && (
-            <div className="flex items-center rounded-lg border border-surface-4 bg-surface-2 p-0.5" role="group" aria-label="Dashboard view">
+            <div className="flex items-center rounded-xl border border-surface-4 bg-surface-1 p-1 shadow-card" role="group" aria-label="Dashboard view">
               {[{ v: 'overview', label: 'Overview' }, { v: 'reporting', label: 'Reporting' }].map(o => (
                 <button key={o.v} onClick={() => switchView(o.v)} aria-pressed={view === o.v}
-                  className={clsx('px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
-                    view === o.v ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-200')}>
+                  className={clsx('px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                    view === o.v ? 'bg-zinc-100 text-surface-2' : 'text-zinc-400 hover:text-zinc-200')}>
                   {o.label}
                 </button>
               ))}

@@ -13,7 +13,7 @@ export default function Overview() {
   return (
     <PageShell>
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-100">Overview</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Overview</h1>
         <p className="text-sm text-zinc-500 mt-1">
           Courses, people and progress across CampusCE. Select any figure to see the full list.
           {s.data_as_of && <span> Data as of {fmtDateTime(s.data_as_of)} CST.</span>}

@@ -46,7 +46,7 @@ export default function Topology() {
     <div className="p-6 space-y-6 ">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-100">Topology</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Topology</h1>
           <p className="text-sm text-zinc-500 mt-1">Infrastructure overview &amp; data flow</p>
         </div>
 

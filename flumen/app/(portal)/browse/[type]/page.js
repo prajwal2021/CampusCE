@@ -106,7 +106,7 @@ function Browse() {
           { label: meta?.title || type },
         ]} />
         <div className="flex items-end justify-between gap-4 flex-wrap">
-          <h1 className="text-2xl font-semibold text-zinc-100">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">
             {meta?.title || type}
             {meta?.group && <span className="text-zinc-500 font-normal text-lg"> · {meta.group.label}</span>}
           </h1>

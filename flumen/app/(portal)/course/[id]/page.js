@@ -21,7 +21,7 @@ export default function CoursePage() {
       <div className="space-y-2">
         <Crumbs items={[{ label: 'Overview', href: '/' }, { label: 'Courses', href: '/browse/courses' }, { label: c.name }]} />
         <div className="flex items-start gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold text-zinc-100">{c.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{c.name}</h1>
           <StatusBadge status={c.status} />
         </div>
       </div>

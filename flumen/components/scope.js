@@ -30,15 +30,15 @@ export function ScopeToggle() {
     { v: 'all', label: 'All Canvas', hint: 'Every course in the Canvas extract, including development and sandbox courses' },
   ];
   return (
-    <div className="flex items-center rounded-lg border border-surface-4 bg-surface-2 p-0.5 shrink-0" role="group" aria-label="Data scope">
+    <div className="flex items-center rounded-lg border border-nav-line/15 bg-nav-line/5 p-0.5 shrink-0" role="group" aria-label="Data scope">
       {opts.map(o => (
         <button
           key={o.v}
           onClick={() => setScope(o.v)}
           title={o.hint}
           aria-pressed={scope === o.v}
-          className={clsx('px-3 py-1 rounded-md text-xs font-medium transition-colors',
-            scope === o.v ? 'bg-accent text-white' : 'text-zinc-400 hover:text-zinc-200')}
+          className={clsx('px-3 py-1 rounded-md text-xs font-semibold transition-colors',
+            scope === o.v ? 'bg-nav-accent text-nav' : 'text-nav-muted hover:text-nav-fg')}
         >{o.label}</button>
       ))}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { get } from '@/lib/api';
+import { useChartColors } from '@/components/theme';
 import {
   ArrowLeftRight, Loader2, CheckCircle2, AlertTriangle, Plus, Minus, Equal
 } from 'lucide-react';
@@ -10,6 +11,7 @@ import {
 } from 'recharts';
 
 export default function Comparison() {
+  const c = useChartColors();
   const [runs, setRuns] = useState([]);
   const [runA, setRunA] = useState('');
   const [runB, setRunB] = useState('');
@@ -60,7 +62,7 @@ export default function Comparison() {
   return (
     <div className="p-6 space-y-6 ">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-100">Comparison</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Comparison</h1>
         <p className="text-sm text-zinc-500 mt-1">Side-by-side run analysis</p>
       </div>
 
@@ -126,14 +128,14 @@ export default function Comparison() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                    <XAxis type="number" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} />
-                    <YAxis dataKey="table" type="category" tick={{ fill: '#71717a', fontSize: 10 }} width={140} axisLine={false} />
-                    <Tooltip contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: '#a1a1aa' }} />
-                    <Legend wrapperStyle={{ fontSize: 11, color: '#71717a' }} />
-                    <Bar dataKey="Rows A" fill="#6366f1" radius={[0, 4, 4, 0]} />
-                    <Bar dataKey="Rows B" fill="#818cf8" radius={[0, 4, 4, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+                    <XAxis type="number" tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} />
+                    <YAxis dataKey="table" type="category" tick={{ fill: c.axis, fontSize: 10 }} width={140} axisLine={false} />
+                    <Tooltip contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBorder}`, borderRadius: 8, fontSize: 12 }}
+                      labelStyle={{ color: c.tipLabel }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: c.axis }} />
+                    <Bar dataKey="Rows A" fill={c.primary} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Rows B" fill={c.tertiary} radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

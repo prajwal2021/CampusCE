@@ -24,7 +24,7 @@ export default function SectionPage() {
           { label: s.name },
         ]} />
         <div className="flex items-start gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold text-zinc-100">{s.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{s.name}</h1>
           <StatusBadge status={s.status} />
         </div>
         <p className="text-sm text-zinc-500">Section of {L.course(s.course_id, s.course)}</p>

@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Database, GitBranch, ArrowLeftRight, Activity, Droplets, TerminalSquare, LogOut } from 'lucide-react';
+import { LayoutDashboard, Database, GitBranch, ArrowLeftRight, Activity, Droplets, TerminalSquare } from 'lucide-react';
 import clsx from 'clsx';
-import { post } from '@/lib/api';
+import ProfileMenu from '@/components/ProfileMenu';
 
 const NAV = [
   { href: '/admin',            label: 'Dashboard',  icon: LayoutDashboard, exact: true },
@@ -18,18 +18,15 @@ const NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
 
-  const signOut = async () => {
-    try { await post('/auth/logout', {}); } catch {}
-    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/login`;
-  };
-
   return (
-    <aside className="w-56 flex-shrink-0 bg-surface-1 border-r border-surface-4 flex flex-col">
-      <div className="h-16 flex items-center gap-2.5 px-5 border-b border-surface-4">
-        <Droplets className="w-6 h-6 text-accent" />
+    <aside className="w-60 flex-shrink-0 bg-nav text-nav-fg border-r border-nav-line/10 flex flex-col">
+      <div className="h-16 flex items-center gap-2.5 px-5 border-b border-nav-line/10">
+        <span className="w-9 h-9 rounded-xl bg-nav-accent/15 flex items-center justify-center">
+          <Droplets className="w-5 h-5 text-nav-accent" />
+        </span>
         <div className="leading-tight">
-          <span className="block text-lg font-semibold tracking-tight text-zinc-100">Flumen</span>
-          <span className="block text-[10px] uppercase tracking-wider text-zinc-500">Admin</span>
+          <span className="block text-base font-semibold tracking-tight">Flumen</span>
+          <span className="block text-[10px] uppercase tracking-[0.14em] text-nav-muted">Admin</span>
         </div>
       </div>
 
@@ -40,29 +37,25 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? 'page' : undefined}
               className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 active
-                  ? 'bg-accent/10 text-accent'
-                  : 'text-zinc-400 hover:bg-surface-3 hover:text-zinc-200'
+                  ? 'bg-nav-line/10 text-nav-fg'
+                  : 'text-nav-muted hover:bg-nav-line/5 hover:text-nav-fg'
               )}
             >
-              <Icon className="w-4.5 h-4.5" />
+              {active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-nav-accent" />}
+              <Icon className={clsx('w-[18px] h-[18px]', active && 'text-nav-accent')} />
               {label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-3 py-3 border-t border-surface-4">
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400 hover:bg-surface-3 hover:text-zinc-200 transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign out
-        </button>
-        <p className="px-3 pt-2 text-[11px] text-zinc-600">CampusCE Pipeline · TTU OIT</p>
+      <div className="px-3 py-3 border-t border-nav-line/10">
+        <ProfileMenu placement="up" showName />
+        <p className="px-2 pt-2 text-[11px] text-nav-muted/70">CampusCE Pipeline · TTU OIT</p>
       </div>
     </aside>
   );

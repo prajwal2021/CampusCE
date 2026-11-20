@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { get, post } from '@/lib/api';
+import { useChartColors } from '@/components/theme';
 import {
   Clock, Database, HardDrive, ArrowDownToLine, ArrowUpFromLine,
   RefreshCw, CheckCircle2, AlertCircle, Loader2, Server, X,
@@ -59,6 +60,7 @@ function fmtCountdown(next, now) {
 }
 
 export default function Dashboard() {
+  const c = useChartColors();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -148,7 +150,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-100">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Dashboard</h1>
           <p className="text-sm text-zinc-500 mt-1">Pipeline health &amp; status</p>
         </div>
         <div className="flex items-center gap-3">
@@ -238,17 +240,17 @@ export default function Dashboard() {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="gRows" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="0%" stopColor={c.primary} stopOpacity={0.3} />
+                    <stop offset="100%" stopColor={c.primary} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="run" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={60}
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+                <XAxis dataKey="run" tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={60}
                   tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                <Tooltip contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: '#a1a1aa' }} />
-                <Area type="monotone" dataKey="rows" stroke="#6366f1" fill="url(#gRows)" strokeWidth={2} />
+                <Tooltip contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBorder}`, borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: c.tipLabel }} />
+                <Area type="monotone" dataKey="rows" stroke={c.primary} fill="url(#gRows)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -259,13 +261,13 @@ export default function Dashboard() {
           <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                <XAxis dataKey="run" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
-                <Tooltip contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: '#a1a1aa' }} />
-                <Bar dataKey="changed" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="deleted" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+                <XAxis dataKey="run" tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
+                <Tooltip contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBorder}`, borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: c.tipLabel }} />
+                <Bar dataKey="changed" fill={c.primary} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="deleted" fill={c.danger} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

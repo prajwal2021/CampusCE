@@ -2,27 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Themes. Values are RGB triplets so Tailwind opacity modifiers (bg-accent/10) keep working.
+ * Light follows 60 / 30 / 10: cream surfaces, navy for structure and text, coral for actions.
+ * Dark keeps the same brand: deep navy surfaces, cream text, coral accent.
+ */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --surface-0: 246 240 228;  /* cream page */
+  --surface-1: 239 231 214;  /* table headers, wells */
+  --surface-2: 255 252 246;  /* cards */
+  --surface-3: 236 227 209;  /* hover, row lines */
+  --surface-4: 221 210 188;  /* borders */
+
+  --ink-100: 19 41 75;       /* navy: headings, figures */
+  --ink-200: 27 50 88;
+  --ink-300: 42 64 104;
+  --ink-400: 70 88 124;
+  --ink-500: 92 108 140;
+  --ink-600: 112 124 150;
+  --ink-700: 170 178 194;
+
+  --accent: 194 82 61;       /* coral, deep enough for text on cream */
+  --accent-hover: 224 112 90;
+  --accent-muted: 168 66 48;
+  --accent-fg: 255 255 255;
+
+  --nav: 19 41 75;           /* navy bar */
+  --nav-fg: 246 240 228;
+  --nav-muted: 186 196 214;
+  --nav-line: 255 255 255;
+  --nav-accent: 244 140 117;
+
+  --red-300: 170 40 40;
+  --red-400: 185 45 45;
+  --green-400: 22 120 80;
+  --amber-400: 160 100 10;
+  --blue-400: 40 90 170;
+
+  --shadow-card: 0 1px 2px rgb(19 41 75 / 0.05), 0 2px 8px rgb(19 41 75 / 0.04);
+  --shadow-pop: 0 12px 32px rgb(19 41 75 / 0.18);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --surface-0: 9 16 31;
+  --surface-1: 13 23 43;
+  --surface-2: 18 30 54;
+  --surface-3: 26 40 69;
+  --surface-4: 38 54 88;
+
+  --ink-100: 246 241 232;    /* cream text */
+  --ink-200: 226 224 218;
+  --ink-300: 200 202 208;
+  --ink-400: 160 170 188;
+  --ink-500: 128 141 166;
+  --ink-600: 96 110 138;
+  --ink-700: 60 75 106;
+
+  --accent: 240 138 115;     /* coral */
+  --accent-hover: 246 162 143;
+  --accent-muted: 214 110 88;
+  --accent-fg: 19 41 75;
+
+  --nav: 13 23 43;
+  --nav-fg: 246 241 232;
+  --nav-muted: 160 170 188;
+  --nav-line: 255 255 255;
+  --nav-accent: 240 138 115;
+
+  --red-300: 252 165 165;
+  --red-400: 248 113 113;
+  --green-400: 52 211 153;
+  --amber-400: 251 191 36;
+  --blue-400: 96 165 250;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25);
+  --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.5);
+}
+
 @layer base {
+  body { transition: background-color 0.2s ease, color 0.2s ease; }
   * {
     scrollbar-width: thin;
-    scrollbar-color: #27272a transparent;
+    scrollbar-color: rgb(var(--surface-4)) transparent;
   }
-  *::-webkit-scrollbar { width: 6px; height: 6px; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
   *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+  *::-webkit-scrollbar-thumb { background: rgb(var(--surface-4)); border-radius: 4px; }
+  :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 4px; }
 }
 
 @layer components {
   .card {
-    @apply bg-surface-2 border border-surface-4 rounded-xl p-5;
+    @apply bg-surface-2 border border-surface-4 rounded-2xl p-5 shadow-card;
   }
   .card-sm {
-    @apply bg-surface-2 border border-surface-4 rounded-lg p-4;
+    @apply bg-surface-2 border border-surface-4 rounded-xl p-4 shadow-card;
   }
 
   .btn-primary {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
-           bg-accent text-white text-sm font-medium
+           bg-accent text-accent-fg text-sm font-semibold
            hover:bg-accent-hover active:scale-[0.97]
            transition-all duration-150 disabled:opacity-40 disabled:pointer-events-none;
   }
@@ -37,6 +119,11 @@
            text-sm font-medium border border-surface-4 text-zinc-300
            hover:bg-surface-3 hover:border-zinc-600
            transition-all duration-150;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 bg-surface-0 border border-surface-4 rounded-lg text-sm text-zinc-100
+           placeholder:text-zinc-500 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors;
   }
 
   .badge-ok {
@@ -57,14 +144,14 @@
   }
 
   .metric-value {
-    @apply text-2xl font-semibold text-zinc-100 tabular-nums;
+    @apply text-3xl font-semibold text-zinc-100 tabular-nums tracking-tight;
   }
   .metric-label {
-    @apply text-xs font-medium uppercase tracking-wider text-zinc-500;
+    @apply text-[11px] font-semibold uppercase tracking-wider text-zinc-500;
   }
 
   .table-header {
-    @apply text-left text-xs font-medium uppercase tracking-wider text-zinc-500
+    @apply text-left text-xs font-semibold uppercase tracking-wider text-zinc-500
            px-4 py-3 bg-surface-1 border-b border-surface-4
            select-none cursor-pointer hover:text-zinc-300 transition-colors;
   }
@@ -74,12 +161,10 @@
   }
 }
 
-/* Selection highlight */
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgb(var(--accent) / 0.25);
 }
 
-/* Custom animation for the topology flow */
 @keyframes flowPulse {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
@@ -87,3 +172,9 @@
 .flow-dot {
   animation: flowPulse 2s ease-in-out infinite;
 }
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.pop-in { animation: popIn 0.14s ease-out; }

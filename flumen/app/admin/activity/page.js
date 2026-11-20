@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { get } from '@/lib/api';
+import { useChartColors } from '@/components/theme';
 import {
   Activity as ActivityIcon, Loader2, ChevronDown, ChevronRight, Clock,
   ArrowUpFromLine, ArrowDownToLine, CheckCircle2, Table2,
@@ -20,6 +21,7 @@ function fmtCST(iso) {
 }
 
 export default function Activity() {
+  const c = useChartColors();
   const [runs, setRuns] = useState([]);
   const [details, setDetails] = useState({});
   const [expanded, setExpanded] = useState(new Set());
@@ -66,7 +68,7 @@ export default function Activity() {
   return (
     <div className="p-6 space-y-6 ">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-100">Activity</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Activity</h1>
         <p className="text-sm text-zinc-500 mt-1">Run history &amp; incremental changes</p>
       </div>
 
@@ -78,24 +80,24 @@ export default function Activity() {
             <AreaChart data={trendData}>
               <defs>
                 <linearGradient id="gChanged" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="0%" stopColor={c.primary} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={c.primary} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gDeleted" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
+                  <stop offset="0%" stopColor={c.danger} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={c.danger} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis dataKey="run" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
+              <CartesianGrid strokeDasharray="3 3" stroke={c.grid} />
+              <XAxis dataKey="run" tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: c.axis, fontSize: 11 }} axisLine={false} tickLine={false} width={50} />
               <Tooltip
-                contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: '#a1a1aa' }}
+                contentStyle={{ background: c.tipBg, border: `1px solid ${c.tipBorder}`, borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: c.tipLabel }}
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ''}
               />
-              <Area type="monotone" dataKey="changed" stroke="#6366f1" fill="url(#gChanged)" strokeWidth={2} name="Changed" />
-              <Area type="monotone" dataKey="deleted" stroke="#ef4444" fill="url(#gDeleted)" strokeWidth={2} name="Deleted" />
+              <Area type="monotone" dataKey="changed" stroke={c.primary} fill="url(#gChanged)" strokeWidth={2} name="Changed" />
+              <Area type="monotone" dataKey="deleted" stroke={c.danger} fill="url(#gDeleted)" strokeWidth={2} name="Deleted" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

@@ -24,7 +24,7 @@ export default function AssignmentPage() {
           { label: a.title },
         ]} />
         <div className="flex items-start gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold text-zinc-100">{a.title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{a.title}</h1>
           <StatusBadge status={a.status} />
         </div>
         <p className="text-sm text-zinc-500">In {L.course(a.course_id, a.course)}</p>

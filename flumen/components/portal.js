@@ -124,14 +124,20 @@ export function Crumbs({ items }) {
 export function Metric({ label, value, sub, href }) {
   const body = (
     <>
-      <p className="metric-label">{label}</p>
-      <p className="metric-value mt-1">{value}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="metric-label">{label}</p>
+        {href && <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-accent group-hover:translate-x-0.5 transition-all" />}
+      </div>
+      <p className="metric-value mt-2">{value}</p>
       {sub && <p className="text-xs text-zinc-500 mt-1">{sub}</p>}
     </>
   );
-  const base = 'card-sm block';
+  const base = 'card-sm block relative overflow-hidden';
   return href
-    ? <Link href={href} className={clsx(base, 'hover:border-accent/50 hover:bg-surface-3/60 transition-colors')}>{body}</Link>
+    ? <Link href={href} className={clsx(base, 'group hover:border-accent/60 hover:-translate-y-0.5 hover:shadow-pop transition-all duration-200')}>
+        <span className="absolute inset-x-0 top-0 h-[3px] bg-accent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
+        {body}
+      </Link>
     : <div className={base}>{body}</div>;
 }
 
@@ -139,8 +145,8 @@ export function Panel({ title, count, right, children }) {
   return (
     <section className="card p-0 overflow-hidden">
       <div className="px-5 py-3.5 border-b border-surface-4 flex items-center gap-3">
-        <h2 className="text-sm font-medium text-zinc-200">{title}</h2>
-        {count !== undefined && <span className="text-xs text-zinc-500 tabular-nums">{fmtNum(count)}</span>}
+        <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
+        {count !== undefined && <span className="px-2 py-0.5 rounded-full bg-surface-1 text-xs text-zinc-500 tabular-nums">{fmtNum(count)}</span>}
         <div className="ml-auto">{right}</div>
       </div>
       {children}
@@ -157,14 +163,14 @@ export function Table({ columns, rows, empty = 'Nothing to show.', rowKey }) {
         <thead>
           <tr>
             {columns.map((c, i) => (
-              <th key={i} className={clsx('px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-zinc-500 bg-surface-1 border-b border-surface-4 whitespace-nowrap',
+              <th key={i} className={clsx('px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 bg-surface-1 border-b border-surface-4 whitespace-nowrap',
                 c.num ? 'text-right' : 'text-left')}>{c.label}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, ri) => (
-            <tr key={rowKey ? rowKey(r) : ri} className="hover:bg-surface-3/40 transition-colors">
+            <tr key={rowKey ? rowKey(r) : ri} className="hover:bg-accent/[0.04] transition-colors">
               {columns.map((c, i) => (
                 <td key={i} className={clsx('px-4 py-2.5 border-b border-surface-3 text-zinc-300',
                   c.num ? 'text-right tabular-nums' : 'text-left', c.nowrap && 'whitespace-nowrap', c.className)}>
@@ -179,7 +185,7 @@ export function Table({ columns, rows, empty = 'Nothing to show.', rowKey }) {
   );
 }
 
-export const linkCls = 'text-zinc-100 hover:text-accent hover:underline underline-offset-2';
+export const linkCls = 'font-medium text-zinc-100 hover:text-accent hover:underline underline-offset-2';
 
 export const L = {
   course: (id, text) => <Link href={`/course/${id}`} className={linkCls}>{text}</Link>,
@@ -189,7 +195,7 @@ export const L = {
 };
 
 export function PageShell({ children }) {
-  return <div className="w-full px-4 sm:px-6 lg:px-10 py-6 space-y-6">{children}</div>;
+  return <div className="w-full px-4 sm:px-6 lg:px-10 py-8 space-y-7">{children}</div>;
 }
 
 export function Facts({ items }) {
