@@ -4,7 +4,7 @@ import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarRange, X } from 'lucide-react';
 import clsx from 'clsx';
-import { useScope } from '@/components/scope';
+import { useScope, programParam } from '@/components/scope';
 
 const CST = 'America/Chicago';
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: CST });
@@ -21,12 +21,15 @@ export const PRESETS = [
 ];
 export const GRAIN_LABEL = { day: 'Daily', week: 'Weekly', month: 'Monthly', quarter: 'Quarterly', year: 'Yearly' };
 
-/** Filter state lives in the URL so a filtered view can be bookmarked or shared. */
+/**
+ * Filter state lives in the URL so a filtered view can be bookmarked or shared. The program is the
+ * top-bar program (Career Learning Academy by default), shared by every page.
+ */
 export function useFilters(defaults = {}) {
   const sp = useSearchParams();
   const router = useRouter();
   const path = usePathname();
-  const { scope } = useScope();
+  const { scope, program, setProgram } = useScope();
 
   const f = useMemo(() => {
     const preset = sp.get('range') || defaults.range || 'all';
@@ -35,20 +38,25 @@ export function useFilters(defaults = {}) {
     return {
       range: p.key, from: from || '', to: to || '',
       grain: sp.get('grain') || p.grain || 'month',
-      group: sp.get('group') || '', course: sp.get('course') || '',
+      group: programParam(program), course: sp.get('course') || '',
       compare: sp.get('compare') || 'prev',
     };
-  }, [sp, defaults.range]);
+  }, [sp, defaults.range, program]);
 
   const set = useCallback((patch) => {
     const next = new URLSearchParams(sp.toString());
     if (patch.range && patch.range !== 'custom') { next.delete('from'); next.delete('to'); if (!('grain' in patch)) next.delete('grain'); }
     if (patch.range === 'custom') { next.set('from', f.from || shift(today(), -89)); next.set('to', f.to || today()); }
-    if ('group' in patch && patch.group !== f.group) next.delete('course');
-    for (const [k, v] of Object.entries(patch)) v ? next.set(k, v) : next.delete(k);
+    if ('group' in patch) {
+      if (patch.group !== f.group) next.delete('course');
+      setProgram(patch.group || 'all');
+    }
+    next.delete('group');
+    for (const [k, v] of Object.entries(patch)) if (k !== 'group') v ? next.set(k, v) : next.delete(k);
     router.replace(`${path}?${next.toString()}`, { scroll: false });
-  }, [sp, router, path, f]);
+  }, [sp, router, path, f, setProgram]);
 
+  const { ready } = useScope();
   const query = useMemo(() => {
     const p = new URLSearchParams({ scope, grain: f.grain, compare: f.compare });
     if (f.from) p.set('from', f.from);
@@ -58,7 +66,7 @@ export function useFilters(defaults = {}) {
     return p.toString();
   }, [scope, f]);
 
-  return { f, set, query, scope };
+  return { f, set, query, scope, ready };
 }
 
 /** Human-readable filter summary for exports and subtitles. */
@@ -74,7 +82,7 @@ export function describe(f, { programs = [], courses = [], scope } = {}) {
 }
 
 export function FilterBar({ f, set, programs = [], courses = [], showGrain = true, showCourse = true, showCompare = false, right }) {
-  const active = f.group || f.course || f.range !== 'all';
+  const active = f.group !== 'cla' || f.course || f.range !== 'all';
   return (
     <div className="card-sm flex flex-wrap items-end gap-3 py-3">
       <Field label="Date range">
@@ -122,7 +130,7 @@ export function FilterBar({ f, set, programs = [], courses = [], showGrain = tru
         </Field>
       )}
       {active && (
-        <button onClick={() => set({ range: 'all', group: '', course: '', grain: '' })}
+        <button onClick={() => set({ range: 'all', group: 'cla', course: '', grain: '' })}
           className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-200 px-2 py-2">
           <X className="w-3.5 h-3.5" /> Reset
         </button>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Search, Loader2, ArrowUp, ArrowDown, X } from 'lucide-react';
 import clsx from 'clsx';
 import { get } from '@/lib/api';
-import { useScope } from '@/components/scope';
+import { useScope, programParam } from '@/components/scope';
 import { StatusBadge, fmtDate, fmtNum, linkCls } from '@/components/portal';
 import { ExportMenu } from '@/components/charts';
 import { downloadCSV, downloadExcel, downloadPDF } from '@/lib/export';

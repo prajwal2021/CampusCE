@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Menu } from 'lucide-react';
 import AppNav from '@/components/AppNav';
 import GlobalSearch from '@/components/GlobalSearch';
-import { ScopeProvider, ScopeToggle } from '@/components/scope';
+import { ScopeProvider, ScopeToggle, ProgramSelect } from '@/components/scope';
 
 export default function PortalLayout({ children }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -20,6 +20,7 @@ export default function PortalLayout({ children }) {
               </button>
               <GlobalSearch />
               <div className="ml-auto flex items-center gap-3 shrink-0">
+                <ProgramSelect />
                 <ScopeToggle />
               </div>
             </div>

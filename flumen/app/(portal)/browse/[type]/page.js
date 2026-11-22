@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { PageShell, Crumbs, PageHeader } from '@/components/portal';
 import ListTable from '@/components/ListTable';
+import { useScope, programParam } from '@/components/scope';
 
 const BLURB = {
   courses: 'Every course, with its CampusCE SKU, program and enrollment counts.',
@@ -19,7 +20,9 @@ const BLURB = {
 function Browse() {
   const { type } = useParams();
   const sp = useSearchParams();
-  const group = sp.get('group') || '';
+  const { program, setProgram, ready } = useScope();
+  // a ?group= link (from a program page) wins; otherwise follow the top-bar program
+  const group = sp.get('group') || programParam(program);
   const [meta, setMeta] = useState(null);
   const title = meta?.title || type.charAt(0).toUpperCase() + type.slice(1);
 
@@ -35,13 +38,13 @@ function Browse() {
           title={<>{title}{meta?.group && <span className="text-zinc-500 font-normal text-lg"> · {meta.group.label}</span>}</>}
           description={BLURB[type]}
           actions={group ? (
-            <Link href={`/browse/${type}`} className="btn-ghost"><X className="w-4 h-4" /> Show all programs</Link>
+            <Link href={`/browse/${type}`} onClick={() => setProgram('all')} className="btn-ghost"><X className="w-4 h-4" /> Show all programs</Link>
           ) : null}
         />
       </div>
-      <ListTable key={`${type}-${group}`} type={type} group={group} onMeta={setMeta}
+      {ready && <ListTable key={`${type}-${group}`} type={type} group={group} onMeta={setMeta}
         initialSort={sp.get('sort') || null} initialDir={sp.get('sort') ? 'desc' : 'asc'}
-        filtersLabel={meta?.group?.label} />
+        filtersLabel={meta?.group?.label} />}
     </PageShell>
   );
 }

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useFetch, Loading, ErrorBox, PageShell, StatusBadge, fmtNum, fmtDate, fmtDateTime, linkCls } from '@/components/portal';
 import { Kpi, Delta, Sparkline, TrendChart, Bars, ShareBars, ReportCard } from '@/components/charts';
-import { useScope } from '@/components/scope';
+import { useScope, programParam, programLabel } from '@/components/scope';
 import { useChartColors } from '@/components/theme';
 
 const CST = 'America/Chicago';
@@ -28,12 +28,15 @@ function ago(iso) {
 }
 
 export default function Home() {
-  const { scope } = useScope();
+  const { scope, program, setProgram } = useScope();
   const c = useChartColors();
-  const summary = useFetch('/portal/summary');
-  const all = useFetch('/portal/enrollments?grain=month');
-  const recent = useFetch(`/portal/enrollments?grain=day&from=${day(-29)}&to=${day(0)}`);
-  const latest = useFetch('/portal/list?type=enrollments&sort=enrolled&dir=desc&limit=8');
+  const opt = { withProgram: true };
+  const summary = useFetch('/portal/summary', opt);
+  const all = useFetch('/portal/enrollments?grain=month', opt);
+  const recent = useFetch(`/portal/enrollments?grain=day&from=${day(-29)}&to=${day(0)}`, opt);
+  const latest = useFetch('/portal/list?type=enrollments&sort=enrolled&dir=desc&limit=8', opt);
+  const pg = programParam(program);
+  const pname = programLabel(program);
 
   if (summary.loading || all.loading) return <Loading />;
   if (summary.error || all.error) return <PageShell><ErrorBox message={summary.error || all.error} /></PageShell>;
@@ -53,7 +56,8 @@ export default function Home() {
         <div>
           <h1 className="page-title">{greeting()}</h1>
           <p className="page-sub">
-            Enrollments, completions and programs across {scope === 'ce' ? 'CampusCE courses' : 'every Canvas course'} at a glance.
+            {pg ? <>Showing <span className="font-semibold text-zinc-200">{pname}</span>. Change the program at the top right to see others.</>
+                : <>Enrollments, completions and programs across {scope === 'ce' ? 'CampusCE courses' : 'every Canvas course'} at a glance.</>}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -86,7 +90,7 @@ export default function Home() {
       {/* trend + status */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <ReportCard className="xl:col-span-2" title="Enrollments over time" subtitle="New enrollments and completions per month"
-          dataAsOf={s.data_as_of} filters={scope === 'ce' ? 'CampusCE courses, all time' : 'All Canvas courses, all time'}
+          dataAsOf={s.data_as_of} filters={`${pname} · ${scope === 'ce' ? 'CampusCE courses' : 'All Canvas courses'} · all time`}
           right={<Link href="/reports" className="text-xs font-medium text-accent hover:underline hidden sm:inline">Open reports</Link>}
           table={{ columns: [
             { key: 'period', label: 'Month', fmt: v => new Date(v).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', year: 'numeric' }) },
@@ -105,13 +109,23 @@ export default function Home() {
 
       {/* programs + top courses */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <ReportCard title="Enrollments by program" subtitle="Select a program to open it" dataAsOf={s.data_as_of}
-          right={<Link href="/programs" className="text-xs font-medium text-accent hover:underline">All programs</Link>}
-          table={{ columns: [{ key: 'label', label: 'Program' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'students', label: 'Students', num: true }], rows: e.by_program }}>
-          <Bars data={e.by_program} horizontal catWidth={190} labels height={Math.max(300, e.by_program.length * 70)}
-            series={[{ key: 'enrollments', label: 'Enrollments' }, { key: 'completed', label: 'Completed' }]}
-            onClick={d => { const k = d?.payload?.key || d?.key; if (k) window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/group/${k}`; }} />
-        </ReportCard>
+        {pg ? (
+          <ReportCard title="Enrollments by course" subtitle={`${pname}: enrolled and finished every assignment`} dataAsOf={s.data_as_of}
+            right={<Link href={`/group/${pg}`} className="text-xs font-medium text-accent hover:underline">Program page</Link>}
+            table={{ columns: [{ key: 'name', label: 'Course' }, { key: 'sku', label: 'SKU' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'finished_all', label: 'Finished all', num: true }, { key: 'completed', label: 'Concluded', num: true }], rows: e.by_course }}>
+            <Bars data={e.by_course} category="name" horizontal catWidth={260} labels
+              series={[{ key: 'enrollments', label: 'Enrollments' }, { key: 'finished_all', label: 'Finished all assignments' }]}
+              onClick={d => { const id = d?.payload?.id || d?.id; if (id) window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/course/${id}`; }} />
+          </ReportCard>
+        ) : (
+          <ReportCard title="Enrollments by program" subtitle="Select a program to focus every page on it" dataAsOf={s.data_as_of}
+            right={<Link href="/programs" className="text-xs font-medium text-accent hover:underline">All programs</Link>}
+            table={{ columns: [{ key: 'label', label: 'Program' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'students', label: 'Students', num: true }], rows: e.by_program }}>
+            <Bars data={e.by_program} horizontal catWidth={190} labels height={Math.max(300, e.by_program.length * 70)}
+              series={[{ key: 'enrollments', label: 'Enrollments' }, { key: 'completed', label: 'Completed' }]}
+              onClick={d => { const k = d?.payload?.key || d?.key; if (k) setProgram(k); }} />
+          </ReportCard>
+        )}
 
         <section className="card p-0 overflow-hidden flex flex-col">
           <div className="px-5 pt-4 pb-3 flex items-center justify-between">
@@ -119,7 +133,7 @@ export default function Home() {
               <h3 className="section-title">Top courses</h3>
               <p className="text-xs text-zinc-500 mt-0.5">By enrollments, with the share who finished every assignment</p>
             </div>
-            <Link href="/browse/courses" className="text-xs font-medium text-accent hover:underline">All courses</Link>
+            <Link href={`/browse/courses${pg ? `?group=${pg}` : ''}`} className="text-xs font-medium text-accent hover:underline">All courses</Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-fixed">

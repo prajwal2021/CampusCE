@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { get } from '@/lib/api';
-import { useScope } from '@/components/scope';
+import { useScope, programParam } from '@/components/scope';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle, ChevronRight, ArrowLeft } from 'lucide-react';
 import clsx from 'clsx';
@@ -27,11 +27,22 @@ export const fmtPct = n => (n === null || n === undefined ? '—' : `${Number(n)
 
 /* ---------- data loading ---------- */
 
-export function useFetch(rawPath) {
-  const { scope } = useScope();
-  const path = rawPath.startsWith('/portal/') ? `${rawPath}${rawPath.includes('?') ? '&' : '?'}scope=${scope}` : rawPath;
+/**
+ * Fetch a portal endpoint with the chosen scope. withProgram also applies the top-bar program
+ * (unless the path already names a group). Waits until saved preferences are read, so a page
+ * never loads twice on arrival.
+ */
+export function useFetch(rawPath, { withProgram = false } = {}) {
+  const { scope, program, ready } = useScope();
+  let path = rawPath;
+  if (rawPath.startsWith('/portal/')) {
+    const extra = [`scope=${scope}`];
+    if (withProgram && programParam(program) && !/[?&]group=/.test(rawPath)) extra.push(`group=${programParam(program)}`);
+    path = `${rawPath}${rawPath.includes('?') ? '&' : '?'}${extra.join('&')}`;
+  }
   const [state, setState] = useState({ data: null, error: null, loading: true });
   useEffect(() => {
+    if (!ready) return;
     let live = true;
     // keep showing the previous data while the next request loads, so filters don't blank the page
     setState(s => ({ data: s.data, error: null, loading: true }));
@@ -39,7 +50,7 @@ export function useFetch(rawPath) {
       .then(data => live && setState({ data, error: null, loading: false }))
       .catch(e => live && setState({ data: null, error: e.message, loading: false }));
     return () => { live = false; };
-  }, [path]);
+  }, [path, ready]);
   return state;
 }
 

@@ -6,8 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
-    const scope = new URL(request.url).searchParams.get('scope') === 'all' ? 'all' : 'ce';
-    const sc = scopeCond(scope) ? ` AND ${scopeCond(scope)}` : '';
+    const sp = new URL(request.url).searchParams;
+    const scope = sp.get('scope') === 'all' ? 'all' : 'ce';
+    const group = GROUPS[sp.get('group')] ? sp.get('group') : null;   // whitelisted key, safe to inline
+    const sc = (scopeCond(scope) ? ` AND ${scopeCond(scope)}` : '') + (group ? ` AND ${groupExpr('c')} = '${group}'` : '');
+    const scopeOnly = `c.workflow_state <> 'deleted'${scopeCond(scope) ? ` AND ${scopeCond(scope)}` : ''}`;
     const live = `c.workflow_state <> 'deleted'${sc}`;
 
     const res = await q(`
@@ -40,7 +43,7 @@ export async function GET(request) {
       SELECT g.key, count(DISTINCT c.id) AS courses,
              count(DISTINCT e.user_id) FILTER (WHERE e.type = 'StudentEnrollment' AND e.workflow_state = 'active') AS students,
              count(DISTINCT e.user_id) FILTER (WHERE e.type = 'TeacherEnrollment' AND e.workflow_state = 'active') AS instructors
-      FROM (SELECT c.id, ${groupExpr('c')} AS key FROM dbo.canvas_courses c WHERE ${live}) g
+      FROM (SELECT c.id, ${groupExpr('c')} AS key FROM dbo.canvas_courses c WHERE ${scopeOnly}) g
       JOIN dbo.canvas_courses c ON c.id = g.id
       LEFT JOIN dbo.canvas_enrollments e ON e.course_id = c.id
       GROUP BY g.key`);
@@ -49,6 +52,7 @@ export async function GET(request) {
     return NextResponse.json({
       ...res.rows[0],
       scope,
+      group,
       groups: Object.entries(GROUPS).map(([key, g]) => ({
         key, label: g.label, short: g.short, blurb: g.blurb,
         courses: byKey[key]?.courses ?? 0, students: byKey[key]?.students ?? 0, instructors: byKey[key]?.instructors ?? 0,

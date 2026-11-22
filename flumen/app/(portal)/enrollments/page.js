@@ -35,7 +35,7 @@ function Dashboard() {
 
   const header = (
     <PageHeader eyebrow="Insights" title="Enrollments"
-      description="Who is signing up, how far they get and where they finish. Every chart follows the filters and can be exported."
+      description={`${f.group ? (programs.find(x => x.key === f.group)?.label || f.group) : 'All programs'}: who is signing up, how far they get and where they finish. Every chart follows the filters and can be exported.`}
       actions={d && <ExportAll title="Enrollment dashboard" filters={label} dataAsOf={d.data_as_of} />} />
   );
   if (first) return <PageShell>{header}<Loading /></PageShell>;
