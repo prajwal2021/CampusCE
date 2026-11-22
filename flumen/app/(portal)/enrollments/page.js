@@ -83,7 +83,7 @@ function Dashboard() {
           </ReportCard>
           <ReportCard title="Status" subtitle="Where these enrollments stand" filters={label} dataAsOf={d.data_as_of} minH={220}
             table={{ columns: [{ key: 'label', label: 'Status' }, { key: 'value', label: 'Enrollments', num: true }], rows: d.by_status }}>
-            <div className="pt-2"><ShareBars items={d.by_status} colors={[c.series[0], c.series[2], c.series[7], c.series[3]]} /></div>
+            <div className="pt-2"><ShareBars items={d.by_status} colors={[c.series[1], c.series[2], c.series[0], c.series[3]]} /></div>
           </ReportCard>
         </div>
 
@@ -108,7 +108,7 @@ function Dashboard() {
             { key: 'completion_rate', label: 'Concluded %', num: true, fmt: v => (v === null ? '' : `${v}%`) },
           ], rows: d.by_course }}>
           <Bars data={d.by_course} category="name" horizontal catWidth={320} stacked
-            series={[{ key: 'completed', label: 'Completed', slot: 2 }, { key: 'active', label: 'In progress', slot: 0 }, { key: 'dropped', label: 'Dropped', slot: 7 }]}
+            series={[{ key: 'completed', label: 'Completed', slot: 2 }, { key: 'active', label: 'In progress', slot: 1 }, { key: 'dropped', label: 'Dropped', slot: 0 }]}
             onClick={x => { const id = x?.payload?.id || x?.id; if (id) set({ course: String(id) }); }} />
         </ReportCard>
 

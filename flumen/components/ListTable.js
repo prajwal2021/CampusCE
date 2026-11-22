@@ -142,7 +142,7 @@ export default function ListTable({ type, group = '', extra = '', initialSort = 
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="table-scroll">
         <table className="w-full text-sm">
           <thead>
             <tr>
@@ -177,10 +177,10 @@ export default function ListTable({ type, group = '', extra = '', initialSort = 
             )}
           </tbody>
         </table>
-      </div>
-      <div ref={sentinel} className="h-10 flex items-center justify-center text-xs text-zinc-600">
-        {(loading && !meta) || more ? <Loader2 className="w-4 h-4 animate-spin text-accent" />
-          : rows.length > 0 && rows.length >= total ? `All ${fmtNum(total)} shown` : ''}
+        <div ref={sentinel} className="sticky left-0 h-10 flex items-center justify-center text-xs text-zinc-600">
+          {(loading && !meta) || more ? <Loader2 className="w-4 h-4 animate-spin text-accent" />
+            : rows.length > 0 && rows.length >= total ? `All ${fmtNum(total)} shown` : ''}
+        </div>
       </div>
       {error && <p className="px-4 pb-3 text-sm text-red-400">{error}</p>}
     </section>

@@ -158,7 +158,7 @@ export function Panel({ title, count, right, children }) {
 export function Table({ columns, rows, empty = 'Nothing to show.', rowKey }) {
   if (!rows || rows.length === 0) return <p className="px-5 py-8 text-sm text-zinc-500 text-center">{empty}</p>;
   return (
-    <div className="overflow-x-auto">
+    <div className="table-scroll">
       <table className="w-full text-sm">
         <thead>
           <tr>
@@ -172,8 +172,8 @@ export function Table({ columns, rows, empty = 'Nothing to show.', rowKey }) {
           {rows.map((r, ri) => (
             <tr key={rowKey ? rowKey(r) : ri} className="hover:bg-accent/[0.04] transition-colors">
               {columns.map((c, i) => (
-                <td key={i} className={clsx('px-4 py-2.5 border-b border-surface-3 text-zinc-300',
-                  c.num ? 'text-right tabular-nums' : 'text-left', c.nowrap && 'whitespace-nowrap', c.className)}>
+                <td key={i} className={clsx('px-4 py-2.5 border-b border-surface-3 text-zinc-300 whitespace-nowrap',
+                  c.num ? 'text-right tabular-nums' : 'text-left max-w-[360px] truncate', c.className)}>
                   {c.render(r)}
                 </td>
               ))}

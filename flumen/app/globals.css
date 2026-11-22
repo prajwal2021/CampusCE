@@ -10,67 +10,68 @@
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --surface-0: 244 246 250;  /* page */
-  --surface-1: 247 248 251;  /* table headers, wells */
+  /* Texas Tech: scarlet for actions and highlights, black for structure, white surfaces */
+  --surface-0: 246 246 247;  /* page */
+  --surface-1: 250 250 250;  /* table headers, wells */
   --surface-2: 255 255 255;  /* cards */
-  --surface-3: 238 241 246;  /* hover, row lines */
-  --surface-4: 225 230 238;  /* borders */
+  --surface-3: 241 241 242;  /* hover, row lines */
+  --surface-4: 228 228 231;  /* borders */
 
-  --ink-100: 15 30 56;       /* navy: headings, figures */
-  --ink-200: 30 45 72;
-  --ink-300: 52 66 92;
-  --ink-400: 82 96 122;
-  --ink-500: 104 117 140;
-  --ink-600: 138 149 168;
-  --ink-700: 186 194 208;
+  --ink-100: 17 17 17;       /* headings, figures */
+  --ink-200: 34 34 36;
+  --ink-300: 58 58 62;
+  --ink-400: 84 84 90;
+  --ink-500: 107 107 114;
+  --ink-600: 146 146 152;
+  --ink-700: 190 190 196;
 
-  --accent: 200 78 55;       /* coral */
-  --accent-hover: 222 100 76;
-  --accent-muted: 172 64 44;
+  --accent: 204 0 0;         /* TTU scarlet #CC0000 */
+  --accent-hover: 170 0 0;
+  --accent-muted: 153 0 0;
   --accent-fg: 255 255 255;
 
-  --nav: 16 32 60;           /* navy sidebar */
-  --nav-fg: 241 244 250;
-  --nav-muted: 160 174 200;
+  --nav: 17 17 17;           /* black sidebar */
+  --nav-fg: 245 245 245;
+  --nav-muted: 163 163 168;
   --nav-line: 255 255 255;
-  --nav-accent: 246 140 116;
+  --nav-accent: 232 58 58;
 
-  --red-300: 170 40 40;
-  --red-400: 190 46 46;
+  --red-300: 170 30 30;
+  --red-400: 190 30 30;
   --green-400: 18 128 84;
   --amber-400: 168 104 8;
   --blue-400: 38 98 190;
 
-  --shadow-card: 0 1px 2px rgb(15 30 56 / 0.04), 0 1px 3px rgb(15 30 56 / 0.06);
-  --shadow-pop: 0 12px 32px rgb(15 30 56 / 0.16);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.06);
+  --shadow-pop: 0 12px 32px rgb(0 0 0 / 0.16);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --surface-0: 9 16 31;
-  --surface-1: 13 23 43;
-  --surface-2: 18 30 54;
-  --surface-3: 26 40 69;
-  --surface-4: 38 54 88;
+  --surface-0: 12 12 13;
+  --surface-1: 20 20 22;
+  --surface-2: 26 26 28;
+  --surface-3: 36 36 39;
+  --surface-4: 52 52 56;
 
-  --ink-100: 246 241 232;    /* cream text */
-  --ink-200: 226 224 218;
-  --ink-300: 200 202 208;
-  --ink-400: 160 170 188;
-  --ink-500: 128 141 166;
-  --ink-600: 96 110 138;
-  --ink-700: 60 75 106;
+  --ink-100: 245 245 246;
+  --ink-200: 226 226 228;
+  --ink-300: 200 200 204;
+  --ink-400: 164 164 170;
+  --ink-500: 134 134 140;
+  --ink-600: 104 104 110;
+  --ink-700: 68 68 74;
 
-  --accent: 240 138 115;     /* coral */
-  --accent-hover: 246 162 143;
-  --accent-muted: 214 110 88;
-  --accent-fg: 19 41 75;
+  --accent: 239 68 68;
+  --accent-hover: 248 100 100;
+  --accent-muted: 220 50 50;
+  --accent-fg: 255 255 255;
 
-  --nav: 13 23 43;
-  --nav-fg: 246 241 232;
-  --nav-muted: 160 170 188;
+  --nav: 8 8 9;
+  --nav-fg: 245 245 246;
+  --nav-muted: 150 150 156;
   --nav-line: 255 255 255;
-  --nav-accent: 240 138 115;
+  --nav-accent: 239 68 68;
 
   --red-300: 252 165 165;
   --red-400: 248 113 113;
@@ -78,8 +79,8 @@
   --amber-400: 251 191 36;
   --blue-400: 96 165 250;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.25);
-  --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.5);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 16px 40px rgb(0 0 0 / 0.55);
 }
 
 @layer base {
@@ -95,6 +96,9 @@
 }
 
 @layer components {
+  /* Wide tables scroll inside their own box, so the sideways scrollbar is always on screen. */
+  .table-scroll { @apply overflow-auto max-h-[70vh]; }
+  .table-scroll thead th { position: sticky; top: 0; z-index: 1; }
   .page-title { @apply text-2xl font-semibold tracking-tight text-zinc-100; }
   .page-sub { @apply text-sm text-zinc-500 mt-1; }
   .section-title { @apply text-[15px] font-semibold text-zinc-100; }

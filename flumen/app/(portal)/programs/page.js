@@ -37,7 +37,7 @@ export default function ProgramsPage() {
       </div>
 
       <Panel title="All programs" count={s.groups.length}>
-        <div className="overflow-x-auto">
+        <div className="table-scroll">
           <table className="w-full text-sm">
             <thead>
               <tr>

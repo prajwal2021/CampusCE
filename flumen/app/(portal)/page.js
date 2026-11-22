@@ -99,7 +99,7 @@ export default function Home() {
           table={{ columns: [{ key: 'label', label: 'Status' }, { key: 'value', label: 'Enrollments', num: true }], rows: e.by_status }}
           minH={240}
           footer={<span>{fmtNum(k.students)} students across {fmtNum(k.courses)} courses with enrollments.</span>}>
-          <div className="pt-2"><ShareBars items={e.by_status} colors={[c.series[0], c.series[2], c.series[7], c.series[3]]} /></div>
+          <div className="pt-2"><ShareBars items={e.by_status} colors={[c.series[1], c.series[2], c.series[0], c.series[3]]} /></div>
         </ReportCard>
       </div>
 

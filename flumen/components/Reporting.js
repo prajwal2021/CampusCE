@@ -96,7 +96,7 @@ function FreeVsPaid({ data }) {
 
       <section className="card p-0 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-surface-4"><h2 className="text-sm font-medium text-zinc-200">By track</h2></div>
-        <div className="overflow-x-auto">
+        <div className="table-scroll">
           <table className="w-full text-sm">
             <thead><tr><Th>Track</Th><Th num>Learners</Th><Th num>Took free course</Th><Th num>Free, then paid</Th><Th num>Free only</Th><Th num>Paid without free</Th><Th num>Completed all 6</Th></tr></thead>
             <tbody>
@@ -118,7 +118,7 @@ function FreeVsPaid({ data }) {
 
       <section className="card p-0 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-surface-4"><h2 className="text-sm font-medium text-zinc-200">Free and paid courses</h2></div>
-        <div className="overflow-x-auto">
+        <div className="table-scroll">
           <table className="w-full text-sm">
             <thead><tr><Th>Type</Th><Th num>Courses</Th><Th num>Enrolled</Th><Th num>In progress</Th><Th num>Completed</Th><Th num>Dropped</Th></tr></thead>
             <tbody>
@@ -139,7 +139,7 @@ function FreeVsPaid({ data }) {
 
       <section className="card p-0 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-surface-4"><h2 className="text-sm font-medium text-zinc-200">By course</h2></div>
-        <div className="overflow-x-auto">
+        <div className="table-scroll">
           <table className="w-full text-sm">
             <thead><tr><Th>Course</Th><Th>Price</Th><Th num>Enrolled</Th><Th num>In progress</Th><Th num>Completed</Th><Th num>Dropped</Th></tr></thead>
             <tbody>
@@ -163,7 +163,7 @@ function FreeVsPaid({ data }) {
           <h2 className="text-sm font-medium text-zinc-200">By learner</h2>
           <span className="text-xs text-zinc-500 tabular-nums">{fmtNum(learners.length)}</span>
         </div>
-        <div className="overflow-x-auto">
+        <div className="table-scroll">
           <table className="w-full text-sm">
             <thead><tr><Th>Learner</Th><Th>Free course</Th><Th num>Paid enrolled</Th><Th num>Paid completed</Th><Th num>Leadership (of 6)</Th><Th num>Technical (of 6)</Th><Th num>Communication (of 6)</Th><Th>Microcertificate</Th></tr></thead>
             <tbody>

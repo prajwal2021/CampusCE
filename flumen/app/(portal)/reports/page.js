@@ -203,7 +203,7 @@ function Programs({ e, r, label }) {
     <ReportCard title="Courses by outcome" subtitle="The 15 largest courses split into completed, in progress and dropped" filters={label} dataAsOf={e.data_as_of}
       table={{ columns: [{ key: 'name', label: 'Course', link: { key: 'id', href: x => `/course/${x.id}` } }, { key: 'sku', label: 'SKU' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'active', label: 'In progress', num: true }, { key: 'dropped', label: 'Dropped', num: true }], rows: e.by_course }}>
       <Bars data={e.by_course} category="name" horizontal stacked catWidth={320}
-        series={[{ key: 'completed', label: 'Completed', slot: 2 }, { key: 'active', label: 'In progress', slot: 0 }, { key: 'dropped', label: 'Dropped', slot: 7 }]} />
+        series={[{ key: 'completed', label: 'Completed', slot: 2 }, { key: 'active', label: 'In progress', slot: 1 }, { key: 'dropped', label: 'Dropped', slot: 0 }]} />
     </ReportCard>
     <ReportCard title="Instructor load" subtitle="Student enrollments in the courses each instructor teaches" filters={label} dataAsOf={e.data_as_of}
       table={{ columns: [{ key: 'name', label: 'Instructor', link: { key: 'id', href: x => `/person/${x.id}` } }, { key: 'courses', label: 'Courses', num: true }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'completion_rate', label: 'Completion %', num: true, fmt: pctFmt }], rows: r.instructors }}>
@@ -222,7 +222,7 @@ function Engagement({ e, label }) {
       </ReportCard>
       <ReportCard title="Enrollment status" subtitle="Where these enrollments stand" filters={label} dataAsOf={e.data_as_of} minH={240}
         table={{ columns: [{ key: 'label', label: 'Status' }, { key: 'value', label: 'Enrollments', num: true }], rows: e.by_status }}>
-        <div className="pt-3"><ShareBars items={e.by_status} colors={[c.series[0], c.series[2], c.series[7], c.series[3]]} /></div>
+        <div className="pt-3"><ShareBars items={e.by_status} colors={[c.series[1], c.series[2], c.series[0], c.series[3]]} /></div>
       </ReportCard>
     </div>
     <ReportCard title="Assignment progress" subtitle="How far students have got through published assignments" filters={label} dataAsOf={e.data_as_of}
@@ -251,7 +251,7 @@ function Cla({ asOf }) {
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <ReportCard title="Free and paid courses" subtitle="Enrollments and outcomes by price" filters={lbl} dataAsOf={asOf}
         table={{ columns: [{ key: 'pricing', label: 'Type' }, { key: 'courses', label: 'Courses', num: true }, { key: 'enrolled', label: 'Enrolled', num: true }, { key: 'in_progress', label: 'In progress', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'dropped', label: 'Dropped', num: true }], rows: pricing }}>
-        <Bars data={pricing} category="pricing" series={[{ key: 'enrolled', label: 'Enrolled' }, { key: 'completed', label: 'Completed' }, { key: 'dropped', label: 'Dropped', slot: 7 }]} />
+        <Bars data={pricing} category="pricing" series={[{ key: 'enrolled', label: 'Enrolled' }, { key: 'completed', label: 'Completed' }, { key: 'dropped', label: 'Dropped', slot: 0 }]} />
       </ReportCard>
       <ReportCard title="By track" subtitle="Learners in each track and how the free course converts" filters={lbl} dataAsOf={asOf}
         table={{ columns: [{ key: 'label', label: 'Track' }, { key: 'learners', label: 'Learners', num: true }, { key: 'free_learners', label: 'Took free course', num: true }, { key: 'free_then_paid', label: 'Free, then paid', num: true }, { key: 'paid_no_free', label: 'Paid without free', num: true }, { key: 'completed_all_six', label: 'Completed all 6', num: true }], rows: trackRows }}>

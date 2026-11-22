@@ -31,18 +31,21 @@ export function useTheme() {
  */
 const CHART = {
   light: {
-    series: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'],
-    primary: '#2a78d6', secondary: '#13294B', tertiary: '#eb6834', danger: '#B92D2D',
-    grid: '#E6EAF0', axis: '#68758C', text: '#0F1E38', muted: '#68758C',
-    tipBg: '#FFFFFF', tipBorder: '#E1E6EE', tipLabel: '#0F1E38', surface: '#FFFFFF',
+    series: ['#cc0000', '#2a78d6', '#1baf7a', '#eda100', '#6250d6', '#e87ba4', '#008300'],
+    primary: '#cc0000', secondary: '#111111', tertiary: '#2a78d6', danger: '#B91C1C',
+    grid: '#ECECEE', axis: '#6B6B72', text: '#111111', muted: '#6B6B72',
+    tipBg: '#FFFFFF', tipBorder: '#E4E4E7', tipLabel: '#111111', surface: '#FFFFFF',
   },
   dark: {
-    series: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#0ca30c', '#9085e9', '#e66767'],
-    primary: '#3987e5', secondary: '#A0AABC', tertiary: '#d95926', danger: '#F87171',
-    grid: '#223152', axis: '#808DA6', text: '#F1F4FA', muted: '#A0AABC',
-    tipBg: '#121E36', tipBorder: '#263658', tipLabel: '#E2E0DA', surface: '#121E36',
+    series: ['#e5484d', '#3987e5', '#199e70', '#c98500', '#9085e9', '#d55181', '#0ca30c'],
+    primary: '#e5484d', secondary: '#C8C8CC', tertiary: '#3987e5', danger: '#F87171',
+    grid: '#2A2A2E', axis: '#9A9AA0', text: '#F5F5F6', muted: '#A4A4AA',
+    tipBg: '#1A1A1C', tipBorder: '#343438', tipLabel: '#F5F5F6', surface: '#1A1A1C',
   },
 };
+
+/** Fixed colours for enrollment states, so a state keeps its colour on every chart. */
+export const statusColors = c => ({ Active: c.series[1], Completed: c.series[2], Dropped: c.series[0], Invited: c.series[3] });
 
 export function useChartColors() {
   const [theme] = useTheme();

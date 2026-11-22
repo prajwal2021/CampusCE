@@ -47,7 +47,7 @@ export default function AppNav({ open, onClose }) {
         open ? 'translate-x-0' : '-translate-x-full')}>
         <div className="h-16 flex items-center gap-3 px-5 border-b border-nav-line/10">
           <span className="w-9 h-9 rounded-xl bg-nav-accent flex items-center justify-center shadow-sm">
-            <GraduationCap className="w-5 h-5 text-nav" />
+            <GraduationCap className="w-5 h-5 text-white" />
           </span>
           <Link href="/" className="leading-tight" onClick={onClose}>
             <span className="block font-semibold tracking-tight">CampusCE</span>

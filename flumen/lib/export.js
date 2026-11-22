@@ -81,7 +81,7 @@ export async function downloadPDF({ title, reports, filters, dataAsOf }) {
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const M = 40;
-  const NAVY = [15, 30, 56], MUTED = [104, 117, 140], CORAL = [200, 78, 55];
+  const NAVY = [17, 17, 17], MUTED = [107, 107, 114], CORAL = [204, 0, 0];
 
   const header = (t, sub) => {
     doc.setFillColor(...CORAL); doc.rect(0, 0, W, 4, 'F');
@@ -112,8 +112,8 @@ export async function downloadPDF({ title, reports, filters, dataAsOf }) {
       const { head, body } = matrix(r.table);
       autoTable(doc, {
         startY: y, head: [head], body, margin: { left: M, right: M, bottom: 40 },
-        styles: { fontSize: 8, cellPadding: 4, textColor: [52, 66, 92], lineColor: [225, 230, 238], lineWidth: 0.5 },
-        headStyles: { fillColor: [244, 246, 250], textColor: NAVY, fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 4, textColor: [58, 58, 62], lineColor: [228, 228, 231], lineWidth: 0.5 },
+        headStyles: { fillColor: [246, 246, 247], textColor: NAVY, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [250, 251, 253] },
         columnStyles: Object.fromEntries(r.table.columns.map((c, ci) => [ci, c.num ? { halign: 'right' } : {}])),
       });
@@ -123,7 +123,7 @@ export async function downloadPDF({ title, reports, filters, dataAsOf }) {
   // closing block on the last page: when this was generated
   let y = (doc.lastAutoTable?.finalY || H - 90) + 24;
   if (y > H - 70) { doc.addPage(); y = 60; }
-  doc.setDrawColor(225, 230, 238); doc.line(M, y, W - M, y);
+  doc.setDrawColor(228, 228, 231); doc.line(M, y, W - M, y);
   doc.setFontSize(9); doc.setTextColor(...MUTED);
   footerLines({ filters: null, dataAsOf }).forEach((l, i) => doc.text(l, M, y + 16 + i * 12));
 
