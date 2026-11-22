@@ -210,9 +210,11 @@ function UnderTick({ x, y, payload, fill, perLine = 14 }) {
 const legendStyle = c => ({ fontSize: 12, color: c.muted, paddingTop: 8 });
 
 /** Time series. series: [{ key, label }]; kind: 'area' | 'line' | 'bar'. */
-export function TrendChart({ data, series, grain = 'month', kind = 'area', height = 280, stacked = false, valueFmt }) {
+export function TrendChart({ data, series, grain = 'month', kind: wanted = 'area', height = 280, stacked = false, valueFmt }) {
   const c = useChartColors();
   if (!data?.length) return <Empty />;
+  // a line through two or three points reads as a cliff; columns are honest for short histories
+  const kind = data.length <= 6 ? 'bar' : wanted;
   const color = i => c.series[i];
   const common = { data, margin: { top: 10, right: 12, left: -8, bottom: 0 } };
   const x = <XAxis dataKey="period" tickFormatter={v => fmtPeriod(v, grain)} {...axis(c)} minTickGap={24} />;
