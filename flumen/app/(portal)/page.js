@@ -75,8 +75,8 @@ export default function Home() {
           sub={r ? `${fmtNum(r.kpis.enrollments)} new in the last 30 days` : null}
           spark={<Sparkline data={trend} k="enrollments" />} />
         <Kpi label="Students" icon={GraduationCap} value={fmtNum(s.students)} sub={`${fmtNum(s.students_active)} currently active`} href="/browse/students" />
-        <Kpi label="Completion rate" icon={CheckCircle2} value={k.completion_rate === null ? '—' : `${k.completion_rate}%`}
-          sub={`${fmtNum(k.completed)} of ${fmtNum(k.enrollments)} enrollments completed`} href="/reports?tab=completion" />
+        <Kpi label="Finished all assignments" icon={CheckCircle2} value={k.finished_rate === null ? '—' : `${k.finished_rate}%`}
+          sub={`${fmtNum(k.finished_all)} enrollments · ${k.completion_rate ?? 0}% concluded in Canvas`} href="/reports?tab=completion" />
         <Kpi label="Avg assignment progress" icon={TrendingUp} value={k.avg_progress === null ? '—' : `${k.avg_progress}%`}
           sub="Published assignments turned in, per enrollment" href="/enrollments" />
         <Kpi label="Courses" icon={BookOpen} value={fmtNum(s.courses)} sub={`${fmtNum(s.courses_published)} published`} href="/browse/courses" />
@@ -108,7 +108,7 @@ export default function Home() {
         <ReportCard title="Enrollments by program" subtitle="Select a program to open it" dataAsOf={s.data_as_of}
           right={<Link href="/programs" className="text-xs font-medium text-accent hover:underline">All programs</Link>}
           table={{ columns: [{ key: 'label', label: 'Program' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'students', label: 'Students', num: true }], rows: e.by_program }}>
-          <Bars data={e.by_program} horizontal catWidth={200}
+          <Bars data={e.by_program} horizontal catWidth={190} labels height={Math.max(300, e.by_program.length * 70)}
             series={[{ key: 'enrollments', label: 'Enrollments' }, { key: 'completed', label: 'Completed' }]}
             onClick={d => { const k = d?.payload?.key || d?.key; if (k) window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ''}/group/${k}`; }} />
         </ReportCard>
@@ -117,21 +117,22 @@ export default function Home() {
           <div className="px-5 pt-4 pb-3 flex items-center justify-between">
             <div>
               <h3 className="section-title">Top courses</h3>
-              <p className="text-xs text-zinc-500 mt-0.5">By enrollments, with completion rate</p>
+              <p className="text-xs text-zinc-500 mt-0.5">By enrollments, with the share who finished every assignment</p>
             </div>
             <Link href="/browse/courses" className="text-xs font-medium text-accent hover:underline">All courses</Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
+              <colgroup><col /><col className="w-24" /><col className="w-20" /><col className="w-40" /></colgroup>
               <thead><tr>
-                {['Course', 'Enrolled', 'Active', 'Completion'].map((h, i) => (
+                {['Course', 'Enrolled', 'Active', 'Finished all'].map((h, i) => (
                   <th key={h} className={`px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 bg-surface-1 border-y border-surface-4 ${i ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
                 {e.by_course.slice(0, 8).map(row => (
                   <tr key={row.id} className="hover:bg-surface-3/50">
-                    <td className="px-5 py-2.5 border-b border-surface-3 max-w-[340px]">
+                    <td className="px-5 py-2.5 border-b border-surface-3 min-w-0">
                       <Link href={`/course/${row.id}`} className={`${linkCls} block truncate`} title={row.name}>{row.name}</Link>
                       {row.sku && <span className="text-[11px] font-mono text-zinc-500">{row.sku}</span>}
                     </td>
@@ -139,8 +140,8 @@ export default function Home() {
                     <td className="px-5 py-2.5 border-b border-surface-3 text-right tabular-nums text-zinc-300">{fmtNum(row.active)}</td>
                     <td className="px-5 py-2.5 border-b border-surface-3">
                       <div className="flex items-center justify-end gap-2">
-                        <div className="w-20 h-1.5 rounded-full bg-surface-3 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${row.completion_rate || 0}%`, background: c.series[0] }} /></div>
-                        <span className="text-xs tabular-nums text-zinc-300 w-9 text-right">{row.completion_rate ?? 0}%</span>
+                        <div className="w-20 h-1.5 rounded-full bg-surface-3 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${row.finished_rate || 0}%`, background: c.series[0] }} /></div>
+                        <span className="text-xs tabular-nums text-zinc-300 w-9 text-right">{row.finished_rate ?? 0}%</span>
                       </div>
                     </td>
                   </tr>

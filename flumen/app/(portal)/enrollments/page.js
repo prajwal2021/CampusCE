@@ -57,7 +57,7 @@ function Dashboard() {
           <Kpi label="Unique students" icon={GraduationCap} value={fmtNum(k.students)} delta={cmp && <Delta cur={k.students} prev={p.students} suffix={cmp} />}
             sub={k.students ? `${(k.enrollments / k.students).toFixed(1)} enrollments per student` : null} />
           <Kpi label="In progress" icon={PlayCircle} value={fmtNum(k.active)} sub={k.enrollments ? `${Math.round((100 * k.active) / k.enrollments)}% of enrollments` : null} />
-          <Kpi label="Completed" icon={CheckCircle2} value={fmtNum(k.completed)} delta={cmp && <Delta cur={k.completed} prev={p.completed} suffix={cmp} />} sub={`Completion rate ${pct(k.completion_rate)}`} />
+          <Kpi label="Finished all assignments" icon={CheckCircle2} value={fmtNum(k.finished_all)} sub={`${pct(k.finished_rate)} of enrollments · ${fmtNum(k.completed)} concluded in Canvas`} />
           <Kpi label="Dropped" icon={UserMinus} value={fmtNum(k.dropped)} delta={cmp && <Delta cur={k.dropped} prev={p.dropped} invert suffix={cmp} />} sub={`Drop rate ${pct(k.drop_rate)}`} />
           <Kpi label="Avg assignment progress" icon={TrendingUp} value={pct(k.avg_progress)} sub="Published assignments turned in" />
         </div>
@@ -104,9 +104,10 @@ function Dashboard() {
             { key: 'name', label: 'Course', link: { key: 'id', href: r => `/course/${r.id}` } }, { key: 'sku', label: 'SKU' },
             { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'active', label: 'In progress', num: true },
             { key: 'completed', label: 'Completed', num: true }, { key: 'dropped', label: 'Dropped', num: true },
-            { key: 'completion_rate', label: 'Completion %', num: true, fmt: v => (v === null ? '' : `${v}%`) },
+            { key: 'finished_all', label: 'Finished all', num: true }, { key: 'finished_rate', label: 'Finished %', num: true, fmt: v => (v === null ? '' : `${v}%`) },
+            { key: 'completion_rate', label: 'Concluded %', num: true, fmt: v => (v === null ? '' : `${v}%`) },
           ], rows: d.by_course }}>
-          <Bars data={d.by_course} category="name" horizontal catWidth={260} stacked
+          <Bars data={d.by_course} category="name" horizontal catWidth={320} stacked
             series={[{ key: 'completed', label: 'Completed', slot: 2 }, { key: 'active', label: 'In progress', slot: 0 }, { key: 'dropped', label: 'Dropped', slot: 7 }]}
             onClick={x => { const id = x?.payload?.id || x?.id; if (id) set({ course: String(id) }); }} />
         </ReportCard>

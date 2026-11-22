@@ -100,14 +100,14 @@ export function FilterBar({ f, set, programs = [], courses = [], showGrain = tru
         </Field>
       )}
       <Field label="Program">
-        <select className="select max-w-[240px]" value={f.group} onChange={e => set({ group: e.target.value })}>
+        <select className="select w-[200px]" value={f.group} onChange={e => set({ group: e.target.value })}>
           <option value="">All programs</option>
           {programs.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
         </select>
       </Field>
       {showCourse && (
         <Field label="Course">
-          <select className="select max-w-[300px]" value={f.course} onChange={e => set({ course: e.target.value })}>
+          <select className="select w-[260px]" value={f.course} onChange={e => set({ course: e.target.value })}>
             <option value="">All courses</option>
             {courses.map(c => <option key={c.id} value={c.id}>{c.name}{c.sku ? ` (${c.sku})` : ''}</option>)}
           </select>

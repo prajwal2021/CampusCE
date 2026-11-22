@@ -6,7 +6,7 @@ import { parseFilters, Params, enrollWhere, comparisonRange, IS_DONE } from '@/l
 export const dynamic = 'force-dynamic';
 
 const BASE = `FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id`;
-const isoDay = d => d.toISOString().slice(0, 10);
+const isoDay = d => d.toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 
 /**
  * GET /api/portal/reports?scope&group&course&from&to&grain&compare=prev|yoy

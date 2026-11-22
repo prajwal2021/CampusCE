@@ -61,10 +61,10 @@ export async function downloadExcel({ title, sheets, filters, dataAsOf }) {
 }
 
 async function snapshot(node) {
-  const { toPng } = await import('html-to-image');
+  const { toJpeg } = await import('html-to-image');
   const bg = getComputedStyle(node).backgroundColor;
-  return toPng(node, {
-    pixelRatio: 2, skipFonts: true, cacheBust: true,
+  return toJpeg(node, {
+    quality: 0.9, pixelRatio: 2, skipFonts: true, cacheBust: true,
     backgroundColor: bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : '#ffffff',
     filter: el => !(el.dataset && el.dataset.noExport !== undefined),
   });
@@ -104,7 +104,7 @@ export async function downloadPDF({ title, reports, filters, dataAsOf }) {
         const maxW = W - 2 * M, maxH = H * 0.5;
         let w = maxW, h = (props.height * w) / props.width;
         if (h > maxH) { h = maxH; w = (props.width * h) / props.height; }
-        doc.addImage(img, 'PNG', M, y, w, h);
+        doc.addImage(img, 'JPEG', M, y, w, h);
         y += h + 14;
       } catch { /* chart image is optional; the table still prints */ }
     }

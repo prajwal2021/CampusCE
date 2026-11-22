@@ -94,13 +94,28 @@ export async function GET(request) {
              count(*) FILTER (WHERE last_activity_at IS NULL)::int AS anever
       FROM pct`;
 
+    // "Finished all assignments": a second completion measure, since most Canvas enrollments are never formally concluded
+    const finishedSql = `
+      WITH f AS (SELECT e.id, e.user_id, e.course_id, ${groupExpr('c')} AS key ${BASE} WHERE ${bWhere}),
+      pub AS (SELECT context_id AS course_id, count(*) AS n FROM dbo.canvas_assignments
+              WHERE context_type = 'Course' AND workflow_state = 'published' AND context_id IN (SELECT course_id FROM f) GROUP BY 1),
+      done AS (SELECT s.course_id, s.user_id, count(*) AS n FROM dbo.canvas_submissions s
+               JOIN dbo.canvas_assignments a ON a.id = s.assignment_id AND a.workflow_state = 'published'
+               WHERE s.course_id IN (SELECT course_id FROM f) AND s.workflow_state IN ('submitted', 'graded', 'pending_review')
+               GROUP BY 1, 2)
+      SELECT f.course_id, f.key,
+             count(*) FILTER (WHERE pub.n > 0 AND coalesce(done.n, 0) >= pub.n)::int AS finished,
+             count(*) FILTER (WHERE pub.n > 0)::int AS with_assignments
+      FROM f LEFT JOIN pub ON pub.course_id = f.course_id LEFT JOIN done ON done.course_id = f.course_id AND done.user_id = f.user_id
+      GROUP BY 1, 2`;
+
     // courses for the filter menu: everything in scope / program with at least one enrollment
     const cp = new Params();
     const cf = { ...f, course: null, from: null, to: null };
     const coursesSql = `SELECT c.id, c.name, c.sis_source_id AS sku, count(*)::int AS n
       ${BASE} WHERE ${enrollWhere(cf, cp)} GROUP BY 1, 2, 3 ORDER BY 2 LIMIT 500`;
 
-    const [cur, prev, trend, byProgram, byCourse, progress, courses, asOf] = await Promise.all([
+    const [cur, prev, trend, byProgram, byCourse, progress, courses, asOf, finished] = await Promise.all([
       kpis(f),
       prevRange ? kpis(f, prevRange) : null,
       q(trendSql, tp.values),
@@ -109,7 +124,24 @@ export async function GET(request) {
       q(progressSql, bp.values),
       q(coursesSql, cp.values),
       q(`SELECT max(finished_at) AS t FROM etl.run_table`),
+      q(finishedSql, bp.values),
     ]);
+
+    const rate = (n, d) => (d ? Math.round((100 * n) / d) : null);
+    const fin = { course: new Map(), program: new Map(), finished: 0, with: 0 };
+    for (const r of finished.rows) {
+      fin.course.set(r.course_id, r);
+      const pg = fin.program.get(r.key) || { finished: 0, with_assignments: 0 };
+      pg.finished += r.finished; pg.with_assignments += r.with_assignments;
+      fin.program.set(r.key, pg);
+      fin.finished += r.finished; fin.with += r.with_assignments;
+    }
+    const withFinished = (row, src) => ({
+      ...row,
+      completion_rate: rate(row.completed, row.enrollments),
+      finished_all: src?.finished ?? 0,
+      finished_rate: rate(src?.finished ?? 0, src?.with_assignments ?? 0),
+    });
 
     const pr = progress.rows[0] || {};
     const statuses = [
@@ -119,22 +151,22 @@ export async function GET(request) {
       { label: 'Invited', value: cur.invited },
     ];
     const progressBuckets = [
-      ['Not started (0%)', pr.b0], ['1–25%', pr.b1], ['26–50%', pr.b2], ['51–75%', pr.b3], ['76–99%', pr.b4], ['All done (100%)', pr.b5],
+      ['Not started', pr.b0], ['1–25%', pr.b1], ['26–50%', pr.b2], ['51–75%', pr.b3], ['76–99%', pr.b4], ['All done', pr.b5],
     ].map(([label, value]) => ({ label, value: value || 0 }));
     const activity = [
-      ['Last 7 days', pr.a7], ['8–30 days ago', pr.a30], ['31–90 days ago', pr.a90], ['Over 90 days ago', pr.aold], ['Never', pr.anever],
+      ['Last 7 days', pr.a7], ['8–30 days', pr.a30], ['31–90 days', pr.a90], ['90+ days', pr.aold], ['Never', pr.anever],
     ].map(([label, value]) => ({ label, value: value || 0 }));
 
     return NextResponse.json({
       filters: f,
       previous_range: prevRange,
       data_as_of: asOf.rows[0]?.t || null,
-      kpis: { ...cur, avg_progress: pr.avg_progress ?? null },
+      kpis: { ...cur, avg_progress: pr.avg_progress ?? null, finished_all: fin.finished, with_assignments: fin.with, finished_rate: rate(fin.finished, fin.with) },
       previous: prev,
       trend: trend.rows,
-      by_program: byProgram.rows,
+      by_program: byProgram.rows.map(r => withFinished(r, fin.program.get(r.key))),
       by_status: statuses,
-      by_course: byCourse.rows.map(r => ({ ...r, completion_rate: r.enrollments ? Math.round((100 * r.completed) / r.enrollments) : null })),
+      by_course: byCourse.rows.map(r => withFinished(r, fin.course.get(r.id))),
       progress: progressBuckets,
       no_assignments: pr.no_assignments || 0,
       activity,

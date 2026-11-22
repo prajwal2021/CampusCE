@@ -33,7 +33,8 @@ export function useFetch(rawPath) {
   const [state, setState] = useState({ data: null, error: null, loading: true });
   useEffect(() => {
     let live = true;
-    setState({ data: null, error: null, loading: true });
+    // keep showing the previous data while the next request loads, so filters don't blank the page
+    setState(s => ({ data: s.data, error: null, loading: true }));
     get(path)
       .then(data => live && setState({ data, error: null, loading: false }))
       .catch(e => live && setState({ data: null, error: e.message, loading: false }));

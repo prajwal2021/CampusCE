@@ -55,7 +55,7 @@ function Reports() {
         description="Ready-made charts for stakeholders. Switch to the table view on any chart, or export one report or the whole tab to PDF or Excel."
         actions={en.data && rp.data && <ExportTab key={tab.key} title={`${tab.label} report`} filters={label} dataAsOf={asOf} />} />
 
-      <div className="flex gap-1 overflow-x-auto border-b border-surface-4 -mx-1 px-1" role="tablist">
+      <div className="flex gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] border-b border-surface-4 -mx-1 px-1" role="tablist">
         {TABS.map(t => (
           <button key={t.key} role="tab" aria-selected={tab.key === t.key} onClick={() => setTab(t.key)}
             className={clsx('relative flex items-center gap-2 px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors',
@@ -117,28 +117,37 @@ function Trends({ e, r, f, label }) {
 
 function Completion({ e, r, label }) {
   const k = e.kpis;
-  const byProgram = e.by_program.map(p => ({ ...p, rate: p.enrollments ? Math.round((100 * p.completed) / p.enrollments) : 0 }));
-  const leaders = [...e.by_course].sort((a, b) => (b.completion_rate ?? 0) - (a.completion_rate ?? 0));
+  const byProgram = e.by_program.map(p => ({ ...p, completion_rate: p.completion_rate ?? 0, finished_rate: p.finished_rate ?? 0 }));
+  const leaders = [...e.by_course].sort((a, b) => (b.finished_rate ?? 0) - (a.finished_rate ?? 0));
   return (<>
+    <div className="card-sm flex items-start gap-3 text-sm text-zinc-400">
+      <Info className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+      <p>
+        Two ways to measure completion. <span className="font-semibold text-zinc-200">Concluded in Canvas</span> counts enrollments marked completed, which most
+        courses never do. <span className="font-semibold text-zinc-200">Finished all assignments</span> counts students who turned in every published assignment in the course,
+        which is closer to what a stakeholder means by “completed”.
+      </p>
+    </div>
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-      <Kpi label="Completion rate" icon={CheckCircle2} value={pct(k.completion_rate)} sub={`${fmtNum(k.completed)} of ${fmtNum(k.enrollments)} enrollments`} />
-      <Kpi label="Completed" value={fmtNum(k.completed)} sub={`${fmtNum(k.active)} still in progress`} />
+      <Kpi label="Finished all assignments" icon={CheckCircle2} value={pct(k.finished_rate)} sub={`${fmtNum(k.finished_all)} of ${fmtNum(k.with_assignments)} enrollments in courses with assignments`} />
+      <Kpi label="Concluded in Canvas" value={pct(k.completion_rate)} sub={`${fmtNum(k.completed)} of ${fmtNum(k.enrollments)} enrollments`} />
       <Kpi label="Avg assignment progress" value={pct(k.avg_progress)} sub="Published assignments turned in" />
       <Kpi label="Avg current grade" value={r.grades.avg === null ? '—' : `${r.grades.avg}%`} sub={`${fmtNum(r.grades.graded)} enrollments with a grade`} />
     </div>
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <ReportCard title="Completion rate by program" subtitle="Completed enrollments as a share of all enrollments" filters={label} dataAsOf={e.data_as_of}
-        table={{ columns: [{ key: 'label', label: 'Program' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'rate', label: 'Completion %', num: true, fmt: pctFmt }], rows: byProgram }}>
-        <Bars data={byProgram} horizontal catWidth={210} labels valueFmt={v => `${v}%`} series={[{ key: 'rate', label: 'Completion rate' }]} />
+      <ReportCard title="Completion rate by program" subtitle="Both completion measures, as a share of enrollments" filters={label} dataAsOf={e.data_as_of}
+        table={{ columns: [{ key: 'label', label: 'Program' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'finished_all', label: 'Finished all', num: true }, { key: 'finished_rate', label: 'Finished %', num: true, fmt: pctFmt }, { key: 'completed', label: 'Concluded', num: true }, { key: 'completion_rate', label: 'Concluded %', num: true, fmt: pctFmt }], rows: byProgram }}>
+        <Bars data={byProgram} horizontal catWidth={210} labels valueFmt={v => `${v}%`}
+          series={[{ key: 'finished_rate', label: 'Finished all assignments' }, { key: 'completion_rate', label: 'Concluded in Canvas' }]} />
       </ReportCard>
       <ReportCard title="Grade distribution" subtitle="Current course score of each graded enrollment" filters={label} dataAsOf={e.data_as_of}
         table={{ columns: [{ key: 'label', label: 'Score band' }, { key: 'value', label: 'Enrollments', num: true }], rows: r.grades.bands }}>
         <Bars data={r.grades.bands} labels series={[{ key: 'value', label: 'Enrollments' }]} />
       </ReportCard>
     </div>
-    <ReportCard title="Course completion leaderboard" subtitle="Completion rate of the 15 largest courses" filters={label} dataAsOf={e.data_as_of}
-      table={{ columns: [{ key: 'name', label: 'Course', link: { key: 'id', href: x => `/course/${x.id}` } }, { key: 'sku', label: 'SKU' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'completion_rate', label: 'Completion %', num: true, fmt: pctFmt }], rows: leaders }}>
-      <Bars data={leaders} category="name" horizontal catWidth={260} labels valueFmt={v => `${v}%`} series={[{ key: 'completion_rate', label: 'Completion rate' }]} />
+    <ReportCard title="Course completion leaderboard" subtitle="Share of students who finished every assignment, in the 15 largest courses" filters={label} dataAsOf={e.data_as_of}
+      table={{ columns: [{ key: 'name', label: 'Course', link: { key: 'id', href: x => `/course/${x.id}` } }, { key: 'sku', label: 'SKU' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'finished_all', label: 'Finished all', num: true }, { key: 'finished_rate', label: 'Finished %', num: true, fmt: pctFmt }, { key: 'completed', label: 'Concluded', num: true }, { key: 'completion_rate', label: 'Concluded %', num: true, fmt: pctFmt }], rows: leaders }}>
+      <Bars data={leaders} category="name" horizontal catWidth={320} labels valueFmt={v => `${v}%`} series={[{ key: 'finished_rate', label: 'Finished all assignments' }]} />
     </ReportCard>
     <ReportCard title="Assignment progress" subtitle="Share of published assignments each enrollment has turned in" filters={label} dataAsOf={e.data_as_of}
       table={{ columns: [{ key: 'label', label: 'Progress' }, { key: 'value', label: 'Enrollments', num: true }], rows: e.progress }}>
@@ -193,7 +202,7 @@ function Programs({ e, r, label }) {
     </ReportCard>
     <ReportCard title="Courses by outcome" subtitle="The 15 largest courses split into completed, in progress and dropped" filters={label} dataAsOf={e.data_as_of}
       table={{ columns: [{ key: 'name', label: 'Course', link: { key: 'id', href: x => `/course/${x.id}` } }, { key: 'sku', label: 'SKU' }, { key: 'enrollments', label: 'Enrollments', num: true }, { key: 'completed', label: 'Completed', num: true }, { key: 'active', label: 'In progress', num: true }, { key: 'dropped', label: 'Dropped', num: true }], rows: e.by_course }}>
-      <Bars data={e.by_course} category="name" horizontal stacked catWidth={260}
+      <Bars data={e.by_course} category="name" horizontal stacked catWidth={320}
         series={[{ key: 'completed', label: 'Completed', slot: 2 }, { key: 'active', label: 'In progress', slot: 0 }, { key: 'dropped', label: 'Dropped', slot: 7 }]} />
     </ReportCard>
     <ReportCard title="Instructor load" subtitle="Student enrollments in the courses each instructor teaches" filters={label} dataAsOf={e.data_as_of}

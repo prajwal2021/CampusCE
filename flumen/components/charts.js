@@ -186,6 +186,27 @@ function TipBox({ active, payload, label, labelFmt, valueFmt = fmtN }) {
 }
 
 const axis = c => ({ stroke: c.axis, fontSize: 11, tickLine: false, axisLine: false });
+
+/* Category ticks: one truncated line down the side, or up to two short lines under columns. */
+function SideTick({ x, y, payload, width, fill }) {
+  const max = Math.max(8, Math.floor((width - 8) / 6.1));
+  const s = String(payload.value ?? '');
+  const t = s.length > max ? s.slice(0, max - 1) + '…' : s;
+  return <text x={x - 6} y={y} dy={4} textAnchor="end" fontSize={11} fill={fill}><title>{s}</title>{t}</text>;
+}
+function UnderTick({ x, y, payload, fill, perLine = 14 }) {
+  const words = String(payload.value ?? '').split(' ');
+  const lines = [''];
+  for (const w of words) {
+    const cur = lines[lines.length - 1];
+    if ((cur + ' ' + w).trim().length > perLine && cur) lines.push(w); else lines[lines.length - 1] = (cur + ' ' + w).trim();
+  }
+  return (
+    <text x={x} y={y + 12} textAnchor="middle" fontSize={11} fill={fill}>
+      {lines.slice(0, 2).map((l, i) => <tspan key={i} x={x} dy={i ? 13 : 0}>{i === 1 && lines.length > 2 ? l + '…' : l}</tspan>)}
+    </text>
+  );
+}
 const legendStyle = c => ({ fontSize: 12, color: c.muted, paddingTop: 8 });
 
 /** Time series. series: [{ key, label }]; kind: 'area' | 'line' | 'bar'. */
@@ -239,7 +260,7 @@ export function Bars({ data, category = 'label', series, horizontal = false, sta
   const c = useChartColors();
   if (!data?.length) return <Empty />;
   const h = height || (horizontal ? Math.max(180, data.length * (series.length > 1 && !stacked ? 44 : 34) + 40) : 280);
-  const trunc = v => (String(v).length > 34 ? String(v).slice(0, 32) + '…' : v);
+  const perLine = Math.min(22, Math.max(8, Math.floor((70 / Math.max(1, data.length)) * 1.6)));
   return (
     <ResponsiveContainer width="100%" height={h}>
       <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} barGap={2} barCategoryGap={horizontal ? '22%' : '28%'}
@@ -247,9 +268,9 @@ export function Bars({ data, category = 'label', series, horizontal = false, sta
         <CartesianGrid stroke={c.grid} horizontal={!horizontal} vertical={horizontal} />
         {horizontal ? (<>
           <XAxis type="number" {...axis(c)} allowDecimals={false} tickFormatter={valueFmt || fmtN} />
-          <YAxis type="category" dataKey={category} {...axis(c)} width={catWidth} tickFormatter={trunc} interval={0} />
+          <YAxis type="category" dataKey={category} {...axis(c)} width={catWidth} interval={0} tick={<SideTick width={catWidth} fill={c.axis} />} />
         </>) : (<>
-          <XAxis dataKey={category} {...axis(c)} interval={0} tickFormatter={trunc} />
+          <XAxis dataKey={category} {...axis(c)} interval={0} height={36} tick={<UnderTick fill={c.axis} perLine={perLine} />} />
           <YAxis {...axis(c)} allowDecimals={false} width={48} tickFormatter={valueFmt || fmtN} />
         </>)}
         <Tooltip content={<TipBox valueFmt={valueFmt} />} cursor={{ fill: c.grid, opacity: 0.45 }} />
