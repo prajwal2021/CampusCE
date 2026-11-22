@@ -123,10 +123,10 @@ export default function Home() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-fixed">
-              <colgroup><col /><col className="w-24" /><col className="w-20" /><col className="w-40" /></colgroup>
+              <colgroup><col /><col className="w-[84px]" /><col className="w-[72px]" /><col className="w-[124px]" /></colgroup>
               <thead><tr>
                 {['Course', 'Enrolled', 'Active', 'Finished all'].map((h, i) => (
-                  <th key={h} className={`px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 bg-surface-1 border-y border-surface-4 ${i ? 'text-right' : 'text-left'}`}>{h}</th>
+                  <th key={h} className={`${i ? 'px-3' : 'px-5'} py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500 bg-surface-1 border-y border-surface-4 ${i ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr></thead>
               <tbody>
@@ -136,11 +136,11 @@ export default function Home() {
                       <Link href={`/course/${row.id}`} className={`${linkCls} block truncate`} title={row.name}>{row.name}</Link>
                       {row.sku && <span className="text-[11px] font-mono text-zinc-500">{row.sku}</span>}
                     </td>
-                    <td className="px-5 py-2.5 border-b border-surface-3 text-right tabular-nums text-zinc-300">{fmtNum(row.enrollments)}</td>
-                    <td className="px-5 py-2.5 border-b border-surface-3 text-right tabular-nums text-zinc-300">{fmtNum(row.active)}</td>
-                    <td className="px-5 py-2.5 border-b border-surface-3">
+                    <td className="px-3 py-2.5 border-b border-surface-3 text-right tabular-nums text-zinc-300">{fmtNum(row.enrollments)}</td>
+                    <td className="px-3 py-2.5 border-b border-surface-3 text-right tabular-nums text-zinc-300">{fmtNum(row.active)}</td>
+                    <td className="pl-3 pr-5 py-2.5 border-b border-surface-3">
                       <div className="flex items-center justify-end gap-2">
-                        <div className="w-20 h-1.5 rounded-full bg-surface-3 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${row.finished_rate || 0}%`, background: c.series[0] }} /></div>
+                        <div className="w-12 h-1.5 rounded-full bg-surface-3 overflow-hidden"><div className="h-full rounded-full" style={{ width: `${row.finished_rate || 0}%`, background: c.series[0] }} /></div>
                         <span className="text-xs tabular-nums text-zinc-300 w-9 text-right">{row.finished_rate ?? 0}%</span>
                       </div>
                     </td>

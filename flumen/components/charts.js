@@ -189,7 +189,7 @@ const axis = c => ({ stroke: c.axis, fontSize: 11, tickLine: false, axisLine: fa
 
 /* Category ticks: one truncated line down the side, or up to two short lines under columns. */
 function SideTick({ x, y, payload, width, fill }) {
-  const max = Math.max(8, Math.floor((width - 8) / 6.1));
+  const max = Math.max(8, Math.floor((width - 10) / 7.2));
   const s = String(payload.value ?? '');
   const t = s.length > max ? s.slice(0, max - 1) + '…' : s;
   return <text x={x - 6} y={y} dy={4} textAnchor="end" fontSize={11} fill={fill}><title>{s}</title>{t}</text>;
