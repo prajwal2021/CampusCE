@@ -19,12 +19,12 @@ export default function SectionPage() {
     <PageShell>
       <div className="space-y-2">
         <Crumbs items={[
-          { label: 'Overview', href: '/' },
+          { label: 'Home', href: '/' },
           { label: 'Sections', href: '/browse/sections' },
           { label: s.name },
         ]} />
         <div className="flex items-start gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{s.name}</h1>
+          <h1 className="page-title">{s.name}</h1>
           <StatusBadge status={s.status} />
         </div>
         <p className="text-sm text-zinc-500">Section of {L.course(s.course_id, s.course)}</p>
@@ -63,6 +63,7 @@ export default function SectionPage() {
           empty="No students are enrolled in this section."
           columns={[
             { label: 'Student', render: r => L.person(r.user_id, r.name) },
+            { label: 'CampusCE #', render: r => (r.ce_number ? <span className="font-mono text-xs">{r.ce_number}</span> : '—'), nowrap: true },
             { label: 'Status', render: r => <StatusBadge status={r.status} /> },
             { label: 'Completion', render: r => <ProgressBar pct={r.completion_pct} label={`${r.completed_assignments} of ${r.total_assignments} assignments`} /> },
             { label: 'Grade', num: true, render: r => fmtPct(r.grade_pct) },

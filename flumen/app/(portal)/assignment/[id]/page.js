@@ -19,12 +19,12 @@ export default function AssignmentPage() {
     <PageShell>
       <div className="space-y-2">
         <Crumbs items={[
-          { label: 'Overview', href: '/' },
+          { label: 'Home', href: '/' },
           { label: 'Assignments', href: '/browse/assignments' },
           { label: a.title },
         ]} />
         <div className="flex items-start gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{a.title}</h1>
+          <h1 className="page-title">{a.title}</h1>
           <StatusBadge status={a.status} />
         </div>
         <p className="text-sm text-zinc-500">In {L.course(a.course_id, a.course)}</p>

@@ -13,8 +13,8 @@ export default function ProgramsPage() {
   return (
     <PageShell>
       <div className="space-y-2">
-        <Crumbs items={[{ label: 'Overview', href: '/' }, { label: 'Programs' }]} />
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-100">Programs</h1>
+        <Crumbs items={[{ label: 'Home', href: '/' }, { label: 'Programs' }]} />
+        <h1 className="page-title">Programs</h1>
         <p className="text-sm text-zinc-500">Courses are grouped into programs by their names and Canvas accounts. Select a program to see everything in it.</p>
       </div>
 

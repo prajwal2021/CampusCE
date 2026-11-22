@@ -19,9 +19,9 @@ export default function CoursePage() {
   return (
     <PageShell>
       <div className="space-y-2">
-        <Crumbs items={[{ label: 'Overview', href: '/' }, { label: 'Courses', href: '/browse/courses' }, { label: c.name }]} />
+        <Crumbs items={[{ label: 'Home', href: '/' }, { label: 'Courses', href: '/browse/courses' }, { label: c.name }]} />
         <div className="flex items-start gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{c.name}</h1>
+          <h1 className="page-title">{c.name}</h1>
           <StatusBadge status={c.status} />
         </div>
       </div>
@@ -81,6 +81,7 @@ export default function CoursePage() {
           empty="No students are enrolled yet."
           columns={[
             { label: 'Student', render: r => L.person(r.user_id, r.name) },
+            { label: 'CampusCE #', render: r => (r.ce_number ? <span className="font-mono text-xs">{r.ce_number}</span> : '—'), nowrap: true },
             { label: 'Status', render: r => <StatusBadge status={r.status} /> },
             { label: 'Section', render: r => r.section || '—' },
             { label: 'Completion', render: r => <ProgressBar pct={r.completion_pct} label={`${r.completed_assignments} of ${r.total_assignments} assignments`} /> },

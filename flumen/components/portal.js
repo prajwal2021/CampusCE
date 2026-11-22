@@ -56,7 +56,7 @@ export function ErrorBox({ message, back = '/' }) {
       <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
       <div>
         <p className="text-sm text-red-300">{message}</p>
-        <Link href={back} className="text-sm text-accent hover:underline mt-2 inline-block">Back to overview</Link>
+        <Link href={back} className="text-sm text-accent hover:underline mt-2 inline-block">Back to home</Link>
       </div>
     </div>
   );
@@ -134,8 +134,7 @@ export function Metric({ label, value, sub, href }) {
   );
   const base = 'card-sm block relative overflow-hidden';
   return href
-    ? <Link href={href} className={clsx(base, 'group hover:border-accent/60 hover:-translate-y-0.5 hover:shadow-pop transition-all duration-200')}>
-        <span className="absolute inset-x-0 top-0 h-[3px] bg-accent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
+    ? <Link href={href} className={clsx(base, 'group hover:border-accent/50 hover:-translate-y-0.5 hover:shadow-pop transition-all duration-200')}>
         {body}
       </Link>
     : <div className={base}>{body}</div>;
@@ -195,7 +194,32 @@ export const L = {
 };
 
 export function PageShell({ children }) {
-  return <div className="w-full px-4 sm:px-6 lg:px-10 py-8 space-y-7">{children}</div>;
+  return <div className="w-full max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">{children}</div>;
+}
+
+/** Page title row: title, optional description and actions on the right. */
+export function PageHeader({ title, description, actions, eyebrow }) {
+  return (
+    <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="min-w-0">
+        {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.12em] text-accent mb-1">{eyebrow}</p>}
+        <h1 className="page-title">{title}</h1>
+        {description && <p className="page-sub max-w-3xl">{description}</p>}
+      </div>
+      {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
+    </div>
+  );
+}
+
+/** Shows a CampusCE number (or other ID) in a compact mono pill. */
+export function IdPill({ label, value }) {
+  if (!value) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-surface-4 bg-surface-1 text-xs">
+      <span className="text-zinc-500">{label}</span>
+      <span className="font-mono font-semibold text-zinc-100">{value}</span>
+    </span>
+  );
 }
 
 export function Facts({ items }) {

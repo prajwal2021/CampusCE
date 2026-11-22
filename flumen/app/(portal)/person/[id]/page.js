@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   useFetch, Loading, ErrorBox, PageShell, Crumbs, Metric, Panel, Table, StatusBadge, ProgressBar,
-  L, linkCls, fmtDate, fmtDateTime, fmtNum, fmtPct,
+  L, linkCls, IdPill, fmtDate, fmtDateTime, fmtNum, fmtPct,
 } from '@/components/portal';
 
 export default function PersonPage() {
@@ -22,16 +22,20 @@ export default function PersonPage() {
     <PageShell>
       <div className="space-y-2">
         <Crumbs items={[
-          { label: 'Overview', href: '/' },
+          { label: 'Home', href: '/' },
           { label: isStudent || !isInstructor ? 'Students' : 'Instructors', href: isStudent || !isInstructor ? '/browse/students' : '/browse/instructors' },
           { label: p.name },
         ]} />
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-100">{p.name}</h1>
+          <h1 className="page-title">{p.name}</h1>
           {isStudent && <span className="badge-info">Student</span>}
           {isInstructor && <span className="badge-info">Instructor</span>}
         </div>
-        <p className="text-sm text-zinc-500">In Canvas since {fmtDate(p.first_seen)}</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <IdPill label="CampusCE #" value={p.ce_number} />
+          <IdPill label="R#" value={p.r_number} />
+          <span className="text-sm text-zinc-500">In Canvas since {fmtDate(p.first_seen)}</span>
+        </div>
       </div>
 
       {isStudent && (

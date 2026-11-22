@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { ENROLL_LABEL, SUBMISSION_LABEL, avg } from '@/lib/portal-queries';
+import { CE_JOIN, RNUM_JOIN } from '@/lib/portal';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Everything academic linked to one person: courses taken (with professors, completion and
- * grades), courses taught, and recent submissions. Contact details and identifiers are not exposed.
+ * grades), courses taught, and recent submissions, plus the CampusCE number (and R number). Contact
+ * details and logins are not exposed.
  */
 export async function GET(request, { params }) {
   try {
@@ -14,7 +16,9 @@ export async function GET(request, { params }) {
     if (!Number.isSafeInteger(id)) return NextResponse.json({ error: 'Person not found' }, { status: 404 });
 
     const person = await q(
-      `SELECT id, name, created_at AS first_seen FROM dbo.canvas_users WHERE id = $1 AND workflow_state <> 'deleted'`, [id]);
+      `SELECT u.id, u.name, u.created_at AS first_seen, cen.ce_number, rn.r_number
+       FROM dbo.canvas_users u ${CE_JOIN('u')} ${RNUM_JOIN('u')}
+       WHERE u.id = $1 AND u.workflow_state <> 'deleted'`, [id]);
     if (person.rows.length === 0) return NextResponse.json({ error: 'Person not found' }, { status: 404 });
 
     const [taking, teaching, submissions] = await Promise.all([

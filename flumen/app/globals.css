@@ -10,39 +10,39 @@
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  --surface-0: 246 240 228;  /* cream page */
-  --surface-1: 239 231 214;  /* table headers, wells */
-  --surface-2: 255 252 246;  /* cards */
-  --surface-3: 236 227 209;  /* hover, row lines */
-  --surface-4: 221 210 188;  /* borders */
+  --surface-0: 244 246 250;  /* page */
+  --surface-1: 247 248 251;  /* table headers, wells */
+  --surface-2: 255 255 255;  /* cards */
+  --surface-3: 238 241 246;  /* hover, row lines */
+  --surface-4: 225 230 238;  /* borders */
 
-  --ink-100: 19 41 75;       /* navy: headings, figures */
-  --ink-200: 27 50 88;
-  --ink-300: 42 64 104;
-  --ink-400: 70 88 124;
-  --ink-500: 92 108 140;
-  --ink-600: 112 124 150;
-  --ink-700: 170 178 194;
+  --ink-100: 15 30 56;       /* navy: headings, figures */
+  --ink-200: 30 45 72;
+  --ink-300: 52 66 92;
+  --ink-400: 82 96 122;
+  --ink-500: 104 117 140;
+  --ink-600: 138 149 168;
+  --ink-700: 186 194 208;
 
-  --accent: 194 82 61;       /* coral, deep enough for text on cream */
-  --accent-hover: 224 112 90;
-  --accent-muted: 168 66 48;
+  --accent: 200 78 55;       /* coral */
+  --accent-hover: 222 100 76;
+  --accent-muted: 172 64 44;
   --accent-fg: 255 255 255;
 
-  --nav: 19 41 75;           /* navy bar */
-  --nav-fg: 246 240 228;
-  --nav-muted: 186 196 214;
+  --nav: 16 32 60;           /* navy sidebar */
+  --nav-fg: 241 244 250;
+  --nav-muted: 160 174 200;
   --nav-line: 255 255 255;
-  --nav-accent: 244 140 117;
+  --nav-accent: 246 140 116;
 
   --red-300: 170 40 40;
-  --red-400: 185 45 45;
-  --green-400: 22 120 80;
-  --amber-400: 160 100 10;
-  --blue-400: 40 90 170;
+  --red-400: 190 46 46;
+  --green-400: 18 128 84;
+  --amber-400: 168 104 8;
+  --blue-400: 38 98 190;
 
-  --shadow-card: 0 1px 2px rgb(19 41 75 / 0.05), 0 2px 8px rgb(19 41 75 / 0.04);
-  --shadow-pop: 0 12px 32px rgb(19 41 75 / 0.18);
+  --shadow-card: 0 1px 2px rgb(15 30 56 / 0.04), 0 1px 3px rgb(15 30 56 / 0.06);
+  --shadow-pop: 0 12px 32px rgb(15 30 56 / 0.16);
 }
 
 :root[data-theme='dark'] {
@@ -95,8 +95,19 @@
 }
 
 @layer components {
+  .page-title { @apply text-2xl font-semibold tracking-tight text-zinc-100; }
+  .page-sub { @apply text-sm text-zinc-500 mt-1; }
+  .section-title { @apply text-[15px] font-semibold text-zinc-100; }
+  .select {
+    @apply px-3 py-2 bg-surface-2 border border-surface-4 rounded-lg text-sm text-zinc-200
+           focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-colors;
+  }
+  .chip {
+    @apply px-3 py-1.5 rounded-full text-xs font-medium border transition-colors;
+  }
+
   .card {
-    @apply bg-surface-2 border border-surface-4 rounded-2xl p-5 shadow-card;
+    @apply bg-surface-2 border border-surface-4 rounded-xl p-5 shadow-card;
   }
   .card-sm {
     @apply bg-surface-2 border border-surface-4 rounded-xl p-4 shadow-card;

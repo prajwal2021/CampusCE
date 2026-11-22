@@ -12,7 +12,8 @@ export async function GET(request) {
     if (!def) return NextResponse.json({ error: 'Unknown list' }, { status: 404 });
 
     const offset = Math.max(0, parseInt(sp.get('offset') || '0') || 0);
-    const limit = Math.min(100, Math.max(1, parseInt(sp.get('limit') || '50') || 50));
+    const cap = sp.get('export') === '1' ? 5000 : 100;
+    const limit = Math.min(cap,Math.max(1, parseInt(sp.get('limit') || '50') || 50));
     const search = (sp.get('q') || '').trim().slice(0, 80);
     const status = sp.get('status') || '';
     const sortKey = def.sort[sp.get('sort')] ? sp.get('sort') : def.defaultSort;
@@ -26,6 +27,11 @@ export async function GET(request) {
     const where = [def.where];
     if (group && typeof def.from !== 'function') where.push(`${groupExpr('c')} = '${group}'`);
     if (scopeCond(scope) && typeof def.from !== 'function') where.push(scopeCond(scope));
+    const iso = v => (/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v : null);
+    if (def.dateCol && iso(sp.get('from'))) { params.push(iso(sp.get('from'))); where.push(`${def.dateCol} >= $${params.length}::date`); }
+    if (def.dateCol && iso(sp.get('to'))) { params.push(iso(sp.get('to'))); where.push(`${def.dateCol} < $${params.length}::date + 1`); }
+    const course = parseInt(sp.get('course'));
+    if (def.courseCol && Number.isSafeInteger(course)) { params.push(course); where.push(`${def.courseCol} = $${params.length}`); }
     if (search) {
       params.push(`%${escapeLike(search)}%`);
       where.push('(' + def.search.map(c => `${c} ILIKE $${params.length}`).join(' OR ') + ')');

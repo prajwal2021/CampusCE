@@ -1,8 +1,19 @@
 /**
- * Read-only definitions behind the public overview. Only the columns listed here
- * ever leave the server: names, course facts and progress. No emails, student IDs,
- * logins or IP addresses.
+ * Read-only definitions behind the overview. Only the columns listed here ever leave the server:
+ * names, the CampusCE number (and R number), course facts and progress. No emails, logins or IP addresses.
  */
+
+/**
+ * CampusCE number: CampusCE provisions Canvas logins with a SIS user id of the form CE1234567
+ * (canvas_pseudonyms.sis_user_id). TTU students may also carry an R number (R12345678).
+ * A live login wins over a deleted one.
+ */
+const idJoin = (alias, col, pattern, userAlias) => `LEFT JOIN (
+    SELECT DISTINCT ON (user_id) user_id, upper(sis_user_id) AS ${col}
+    FROM dbo.canvas_pseudonyms WHERE sis_user_id ~* '${pattern}'
+    ORDER BY user_id, (workflow_state = 'deleted'), id) ${alias} ON ${alias}.user_id = ${userAlias}.id`;
+export const CE_JOIN = (userAlias = 'u', alias = 'cen') => idJoin(alias, 'ce_number', '^CE[0-9]+$', userAlias);
+export const RNUM_JOIN = (userAlias = 'u', alias = 'rn') => idJoin(alias, 'r_number', '^R[0-9]{8}$', userAlias);
 
 const SUB_STUDENTS = `(SELECT count(*) FROM dbo.canvas_enrollments e WHERE e.course_id = c.id AND e.type = 'StudentEnrollment' AND e.workflow_state = 'active')`;
 const SUB_TEACHERS = `(SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e WHERE e.course_id = c.id AND e.type = 'TeacherEnrollment' AND e.workflow_state = 'active')`;
@@ -59,7 +70,7 @@ export const groupLabelExpr = (a = 'c') =>
   `CASE ${groupExpr(a)} ${Object.entries(GROUPS).map(([k, g]) => `WHEN '${k}' THEN '${g.label.replace(/'/g, "''")}'`).join(' ')} END`;
 
 const personDerived = (type, group, scope) => `(
-  SELECT u.id, u.name, u.sortable_name,
+  SELECT u.id, u.name, u.sortable_name, cen.ce_number,
          count(*) AS enrollments,
          count(*) FILTER (WHERE e.workflow_state = 'active') AS active_enrollments,
          count(*) FILTER (WHERE e.workflow_state = 'inactive') AS inactive_enrollments,
@@ -67,30 +78,32 @@ const personDerived = (type, group, scope) => `(
   FROM dbo.canvas_enrollments e
   JOIN dbo.canvas_users u ON u.id = e.user_id
   JOIN dbo.canvas_courses c ON c.id = e.course_id AND c.workflow_state <> 'deleted'
+  ${CE_JOIN('u')}
   WHERE e.type = '${type}' AND e.workflow_state NOT IN ('deleted', 'rejected')
     ${group ? `AND ${groupExpr('c')} = '${group}'` : ''}
     ${scopeCond(scope) ? `AND ${scopeCond(scope)}` : ''}
-  GROUP BY u.id, u.name, u.sortable_name) p`;
+  GROUP BY u.id, u.name, u.sortable_name, cen.ce_number) p`;
 
 const personType = (title, type, noun) => ({
   title,
   from: (group, scope) => personDerived(type, group, scope),
   where: 'TRUE',
-  select: `p.id, p.name,
+  select: `p.id, p.name, p.ce_number,
            CASE WHEN p.active_enrollments > 0 THEN 'Active' ELSE 'Inactive' END AS status,
            p.enrollments AS courses, p.active_enrollments AS active_courses,
            p.last_activity`,
   statusExpr: `CASE WHEN p.active_enrollments > 0 THEN 'active' ELSE 'inactive' END`,
   statuses: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }],
-  search: ['p.name'],
+  search: ['p.name', 'p.ce_number'],
   columns: [
     { key: 'name', label: noun },
+    { key: 'ce_number', label: 'CampusCE #', mono: true },
     { key: 'status', label: 'Status', badge: true },
     { key: 'courses', label: 'Courses', num: true },
     { key: 'active_courses', label: 'Active courses', num: true },
     { key: 'last_activity', label: 'Last activity', date: true },
   ],
-  sort: { name: 'p.sortable_name', status: 'status', courses: 'p.enrollments', active_courses: 'p.active_enrollments', last_activity: 'p.last_activity' },
+  sort: { name: 'p.sortable_name', ce_number: 'p.ce_number', status: 'status', courses: 'p.enrollments', active_courses: 'p.active_enrollments', last_activity: 'p.last_activity' },
   defaultSort: 'name',
   link: { kind: 'person', key: 'id' },
 });
@@ -100,7 +113,7 @@ export const TYPES = {
     title: 'Courses',
     from: 'dbo.canvas_courses c',
     where: `c.workflow_state <> 'deleted'`,
-    select: `c.id, c.name, c.course_code AS code, ${COURSE_STATE} AS status,
+    select: `c.id, c.name, c.course_code AS code, c.sis_source_id AS sku, ${COURSE_STATE} AS status,
              ${groupExpr('c')} AS program_key, ${groupLabelExpr('c')} AS program,
              ${SUB_STUDENTS} AS students, ${SUB_TEACHERS} AS instructors, c.created_at AS created`,
     statusExpr: 'c.workflow_state',
@@ -109,16 +122,17 @@ export const TYPES = {
       { value: 'claimed', label: 'Unpublished' },
       { value: 'completed', label: 'Concluded' },
     ],
-    search: ['c.name', 'c.course_code'],
+    search: ['c.name', 'c.course_code', 'c.sis_source_id'],
     columns: [
       { key: 'name', label: 'Course' },
+      { key: 'sku', label: 'SKU', mono: true },
       { key: 'program', label: 'Program', programLink: true },
       { key: 'status', label: 'Status', badge: true },
       { key: 'students', label: 'Students', num: true },
       { key: 'instructors', label: 'Instructors', num: true },
       { key: 'created', label: 'Created', date: true },
     ],
-    sort: { name: 'c.name', program: 'program', status: 'status', students: 'students', instructors: 'instructors', created: 'c.created_at' },
+    sort: { name: 'c.name', sku: 'c.sis_source_id', program: 'program', status: 'status', students: 'students', instructors: 'instructors', created: 'c.created_at' },
     defaultSort: 'name',
     link: { kind: 'course', key: 'id' },
   },
@@ -153,10 +167,14 @@ export const TYPES = {
     from: `dbo.canvas_enrollments e
            JOIN dbo.canvas_users u ON u.id = e.user_id
            JOIN dbo.canvas_courses c ON c.id = e.course_id
-           LEFT JOIN dbo.canvas_course_sections s ON s.id = e.course_section_id`,
+           LEFT JOIN dbo.canvas_course_sections s ON s.id = e.course_section_id
+           ${CE_JOIN('u')}`,
+    dateCol: 'e.created_at',
+    courseCol: 'c.id',
     where: `e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected') AND c.workflow_state <> 'deleted'`,
-    select: `e.id, u.id AS user_id, c.id AS course_id, u.name AS student, c.name AS course, s.name AS section,
-             ${ENROLL_STATE} AS status, e.created_at AS enrolled, e.last_activity_at AS last_activity`,
+    select: `e.id, u.id AS user_id, c.id AS course_id, u.name AS student, cen.ce_number, c.name AS course, c.sis_source_id AS sku, s.name AS section,
+             ${ENROLL_STATE} AS status, e.created_at AS enrolled, coalesce(e.completed_at, CASE WHEN e.workflow_state = 'completed' THEN e.updated_at END) AS completed,
+             e.last_activity_at AS last_activity`,
     statusExpr: 'e.workflow_state',
     statuses: [
       { value: 'active', label: 'Active' },
@@ -164,16 +182,18 @@ export const TYPES = {
       { value: 'completed', label: 'Completed' },
       { value: 'invited', label: 'Invited' },
     ],
-    search: ['u.name', 'c.name', 's.name'],
+    search: ['u.name', 'cen.ce_number', 'c.name', 'c.sis_source_id', 's.name'],
     columns: [
       { key: 'student', label: 'Student' },
+      { key: 'ce_number', label: 'CampusCE #', mono: true },
       { key: 'course', label: 'Course', courseLink: true },
-      { key: 'section', label: 'Section' },
+      { key: 'sku', label: 'SKU', mono: true },
       { key: 'status', label: 'Status', badge: true },
       { key: 'enrolled', label: 'Enrolled', date: true },
+      { key: 'completed', label: 'Completed', date: true },
       { key: 'last_activity', label: 'Last activity', date: true },
     ],
-    sort: { student: 'u.sortable_name', course: 'c.name', section: 's.name', status: 'status', enrolled: 'e.created_at', last_activity: 'e.last_activity_at' },
+    sort: { student: 'u.sortable_name', ce_number: 'cen.ce_number', course: 'c.name', sku: 'c.sis_source_id', status: 'status', enrolled: 'e.created_at', completed: 'completed', last_activity: 'e.last_activity_at' },
     defaultSort: 'student',
     link: { kind: 'person', key: 'user_id' },
   },
@@ -202,7 +222,10 @@ export const TYPES = {
   },
 };
 
-export const escapeLike = s => s.replace(/[\\%_]/g, m => '\\' + m);
+/* Instructors do not have CampusCE numbers; keep that column for students only. */
+TYPES.instructors.columns = TYPES.instructors.columns.filter(c => c.key !== 'ce_number');
+
+export const escapeLike = s =>s.replace(/[\\%_]/g, m => '\\' + m);
 
 /**
  * Career Learning Academy offerings created in CampusCE. The SIS id is the CampusCE SKU:

@@ -2,8 +2,8 @@ import './globals.css';
 import { themeBootScript } from '@/lib/theme-boot';
 
 export const metadata = {
-  title: 'CampusCE Overview',
-  description: 'CampusCE courses, students and instructors at a glance',
+  title: 'CampusCE Analytics',
+  description: 'CampusCE enrollments, completions and reports',
 };
 
 export default function RootLayout({ children }) {

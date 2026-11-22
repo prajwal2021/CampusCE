@@ -1,4 +1,5 @@
 import { q } from '@/lib/db';
+import { CE_JOIN } from '@/lib/portal';
 
 export const ENROLL_LABEL = `CASE e.workflow_state WHEN 'active' THEN 'Active' WHEN 'inactive' THEN 'Inactive'
   WHEN 'completed' THEN 'Completed' WHEN 'invited' THEN 'Invited' ELSE e.workflow_state END`;
@@ -26,7 +27,7 @@ export function studentProgress(courseId, sectionId = null) {
        SELECT enrollment_id, max(current_score) AS score
        FROM dbo.canvas_scores WHERE assignment_group_id IS NULL AND workflow_state = 'active'
        GROUP BY enrollment_id)
-     SELECT e.id AS enrollment_id, u.id AS user_id, u.name, s.name AS section, ${ENROLL_LABEL} AS status,
+     SELECT e.id AS enrollment_id, u.id AS user_id, u.name, cen.ce_number, s.name AS section, ${ENROLL_LABEL} AS status,
             e.created_at AS enrolled, e.last_activity_at AS last_activity,
             round(coalesce(e.total_activity_time, 0) / 3600.0, 1) AS hours_active,
             coalesce(done.n, 0) AS completed_assignments, pub.n AS total_assignments,
@@ -35,6 +36,7 @@ export function studentProgress(courseId, sectionId = null) {
      FROM dbo.canvas_enrollments e
      JOIN dbo.canvas_users u ON u.id = e.user_id
      LEFT JOIN dbo.canvas_course_sections s ON s.id = e.course_section_id
+     ${CE_JOIN('u')}
      LEFT JOIN done ON done.user_id = e.user_id
      LEFT JOIN sc ON sc.enrollment_id = e.id
      CROSS JOIN pub
