@@ -69,13 +69,52 @@ export async function GET() {
   }
 }
 
+/**
+ * Match a pasted list (one entry per line: CampusCE number, TTU email / login, or full name) to Canvas
+ * student accounts, so a list from CampusCE can be excluded in one go. Logins are matched on the
+ * server and never returned.
+ */
+async function resolve(raw) {
+  const lines = [...new Set((Array.isArray(raw) ? raw : [])
+    .flatMap(l => (String(l).includes('@') ? String(l).split(/[,\s]+/) : [String(l)]))
+    .map(l => l.trim().replace(/^["'<]+|["'>]+$/g, ''))
+    .filter(l => l.length >= 2))].slice(0, 300);
+  if (!lines.length) return NextResponse.json({ results: [] });
+
+  const ex = new Set(loadExclusions().users.map(u => String(u.id)));
+  const res = await q(`
+    WITH l AS (SELECT v, n FROM unnest($1::text[]) WITH ORDINALITY AS t(v, n))
+    SELECT l.n, u.id, u.name, cen.ce_number, s.enrollments, s.dropped
+    FROM l
+    JOIN dbo.canvas_users u ON
+         (l.v ~* '^CE[0-9]+$' AND EXISTS (SELECT 1 FROM dbo.canvas_pseudonyms p WHERE p.user_id = u.id AND upper(p.sis_user_id) = upper(l.v)))
+      OR (l.v LIKE '%@%' AND EXISTS (SELECT 1 FROM dbo.canvas_pseudonyms p WHERE p.user_id = u.id
+                                     AND (lower(p.unique_id) = lower(l.v) OR lower(p.sis_user_id) = lower(l.v))))
+      OR (l.v !~ '@' AND l.v !~* '^CE[0-9]+$'
+          AND (lower(regexp_replace(u.name, '\\s+', ' ', 'g')) = lower(regexp_replace(l.v, '\\s+', ' ', 'g'))
+               OR lower(u.sortable_name) = lower(l.v)))
+    ${CE_JOIN('u')}
+    LEFT JOIN LATERAL (SELECT count(*)::int AS enrollments, count(*) FILTER (WHERE ${DROP})::int AS dropped
+                       FROM dbo.canvas_enrollments e WHERE e.user_id = u.id AND ${LIVE}) s ON TRUE
+    ORDER BY l.n, s.enrollments DESC`, [lines]);
+
+  const by = new Map();
+  for (const r of res.rows) {
+    const list = by.get(Number(r.n)) || [];
+    if (!list.some(x => x.id === r.id)) list.push({ id: r.id, name: r.name, ce_number: r.ce_number, enrollments: r.enrollments, dropped: r.dropped, excluded: ex.has(String(r.id)) });
+    by.set(Number(r.n), list);
+  }
+  return NextResponse.json({ results: lines.map((input, i) => ({ input, matches: by.get(i + 1) || [] })) });
+}
+
 export async function POST(request) {
   try {
     const session = await readToken(cookies().get(COOKIE_NAME)?.value);
     if (!session) return NextResponse.json({ error: 'Sign-in required' }, { status: 401 });
 
     const body = await request.json().catch(() => ({}));
-    const action = body.action === 'remove' ? 'remove' : body.action === 'add' ? 'add' : null;
+    if (body.action === 'resolve') return resolve(body.lines);
+    const action =body.action === 'remove' ? 'remove' : body.action === 'add' ? 'add' : null;
     const kind = body.kind === 'user' ? 'user' : body.kind === 'enrollment' ? 'enrollment' : null;
     const ids = (Array.isArray(body.ids) ? body.ids : []).map(Number).filter(Number.isSafeInteger).slice(0, 500);
     const reason = typeof body.reason === 'string' ? body.reason.trim().slice(0, 200) : '';

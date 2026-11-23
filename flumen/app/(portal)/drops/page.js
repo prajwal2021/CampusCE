@@ -367,6 +367,9 @@ function TestsTab({ onChanged }) {
           action={r => <button disabled={busy} onClick={() => addUser(r, reason || r.why)} className="btn-ghost text-sm"><Plus className="w-3.5 h-3.5" /> Exclude</button>} />
       </section>
 
+      <PasteList busy={busy}
+        onExclude={(ids, why) => change({ action: 'add', kind: 'user', ids, reason: why }, n => `${n} test account${n === 1 ? '' : 's'} excluded.`)} />
+
       <AddBySearch busy={busy} onAdd={u => addUser(u, reason || 'Added by search')} />
 
       <section className="card p-0">
@@ -465,6 +468,92 @@ function PeopleTable({ rows, cols, action, empty }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Paste a list from CampusCE (names, CE numbers or emails), check the matches, exclude them together. */
+function PasteList({ busy, onExclude }) {
+  const [text, setText] = useState('');
+  const [reason, setReason] = useState('');
+  const [res, setRes] = useState(null);
+  const [sel, setSel] = useState(() => new Set());
+  const [looking, setLooking] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const check = async () => {
+    const lines = text.split(/[\n;]+/).map(s => s.trim()).filter(Boolean);
+    if (!lines.length) return;
+    setLooking(true); setErr(null);
+    try {
+      const r = await post('/portal/exclusions', { action: 'resolve', lines });
+      setRes(r.results);
+      // tick the clear matches: exactly one account for the line, not already excluded
+      setSel(new Set(r.results.filter(x => x.matches.length === 1 && !x.matches[0].excluded).map(x => x.matches[0].id)));
+    } catch (e) { setErr(e.message); } finally { setLooking(false); }
+  };
+  const toggle = id => setSel(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const missing = res ? res.filter(x => !x.matches.length).length : 0;
+
+  return (
+    <section className="card p-0">
+      <div className="px-5 pt-4 pb-3">
+        <h3 className="section-title">Exclude a list of test accounts</h3>
+        <p className="text-xs text-zinc-500 mt-0.5">
+          Paste the accounts CampusCE uses for testing, one per line: CampusCE number (CE1234567), TTU email or login, or full name.
+          Check the matches, then exclude them in one go.
+        </p>
+      </div>
+      <div className="px-5 pb-4 space-y-3">
+        <textarea className="select w-full min-h-[120px] font-mono text-xs" value={text} onChange={e => { setText(e.target.value); setRes(null); }}
+          placeholder={'CE1002125\nbonnie.cordell+test@ttu.edu\nTest StudentOne'} />
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="btn-ghost text-sm" onClick={check} disabled={looking || !text.trim()}>
+            {looking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Find accounts
+          </button>
+          {err && <span className="text-sm text-accent">{err}</span>}
+        </div>
+
+        {res && (<>
+          <div className="table-scroll rounded-lg border border-surface-3">
+            <table className="w-full text-sm">
+              <thead><tr className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 text-left">
+                {['', 'You entered', 'Account', 'CampusCE #', 'Enrollments', 'Dropped'].map(h => (
+                  <th key={h} className={clsx('px-3 py-2 bg-surface-1 border-b border-surface-4 whitespace-nowrap', ['Enrollments', 'Dropped'].includes(h) && 'text-right')}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {res.flatMap(x => (x.matches.length ? x.matches : [null]).map((m, i) => (
+                  <tr key={`${x.input}-${m?.id || 'none'}`} className={clsx('hover:bg-surface-3/50', !m && 'text-zinc-500')}>
+                    <td className="px-3 py-2 border-b border-surface-3 w-8">
+                      {m && !m.excluded && <input type="checkbox" checked={sel.has(m.id)} onChange={() => toggle(m.id)} aria-label={`Exclude ${m.name}`} />}
+                    </td>
+                    <td className="px-3 py-2 border-b border-surface-3 font-mono text-xs whitespace-nowrap">{i === 0 ? x.input : ''}</td>
+                    <td className="px-3 py-2 border-b border-surface-3 whitespace-nowrap">
+                      {m ? <>
+                        <Link href={`/person/${m.id}`} className="font-medium text-zinc-100 hover:text-accent">{m.name}</Link>
+                        {m.excluded && <span className="ml-2 text-xs text-zinc-500">already excluded</span>}
+                        {x.matches.length > 1 && i === 0 && <span className="ml-2 text-xs text-accent">{x.matches.length} accounts match; pick the right one</span>}
+                      </> : 'No Canvas account found'}
+                    </td>
+                    <td className="px-3 py-2 border-b border-surface-3 font-mono text-xs">{m?.ce_number || (m ? '—' : '')}</td>
+                    <td className="px-3 py-2 border-b border-surface-3 text-right tabular-nums">{m ? fmtNum(m.enrollments) : ''}</td>
+                    <td className="px-3 py-2 border-b border-surface-3 text-right tabular-nums">{m ? fmtNum(m.dropped) : ''}</td>
+                  </tr>
+                )))}
+              </tbody>
+            </table>
+          </div>
+          {missing > 0 && <p className="text-xs text-zinc-500">{missing} line{missing === 1 ? '' : 's'} matched no account. Check the spelling, or try the CampusCE number.</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <input className="select flex-1 min-w-[200px]" placeholder="Reason, e.g. CampusCE test logins (list from Bonnie, Nov 23)" value={reason} onChange={e => setReason(e.target.value)} />
+            <button className="btn-primary text-sm" disabled={busy || !sel.size}
+              onClick={() => { onExclude([...sel], reason || 'Test account list from CampusCE'); setSel(new Set()); setRes(null); setText(''); }}>
+              Exclude {sel.size} account{sel.size === 1 ? '' : 's'}
+            </button>
+          </div>
+        </>)}
+      </div>
+    </section>
   );
 }
 
