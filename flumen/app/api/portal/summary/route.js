@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { GROUPS, groupExpr, scopeCond } from '@/lib/portal';
+import { notTest } from '@/lib/exclusions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
     const sp = new URL(request.url).searchParams;
+    const T = notTest('e');   // leave CampusCE test enrollments out
     const scope = sp.get('scope') === 'all' ? 'all' : 'ce';
     const group = GROUPS[sp.get('group')] ? sp.get('group') : null;   // whitelisted key, safe to inline
     const sc = (scopeCond(scope) ? ` AND ${scopeCond(scope)}` : '') + (group ? ` AND ${groupExpr('c')} = '${group}'` : '');
@@ -21,17 +23,17 @@ export async function GET(request) {
         (SELECT count(*) FROM dbo.canvas_course_sections s JOIN dbo.canvas_courses c ON c.id = s.course_id
           WHERE s.workflow_state <> 'deleted' AND ${live}) AS sections,
         (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-          WHERE e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected') AND ${live}) AS students,
+          WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state NOT IN ('deleted', 'rejected') AND ${live}) AS students,
         (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-          WHERE e.type = 'StudentEnrollment' AND e.workflow_state = 'active' AND ${live}) AS students_active,
+          WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active' AND ${live}) AS students_active,
         (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
           WHERE e.type = 'TeacherEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected') AND ${live}) AS instructors,
         (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
           WHERE e.type = 'TeacherEnrollment' AND e.workflow_state = 'active' AND ${live}) AS instructors_active,
         (SELECT count(*) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-          WHERE e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected') AND ${live}) AS enrollments,
+          WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state NOT IN ('deleted', 'rejected') AND ${live}) AS enrollments,
         (SELECT count(*) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-          WHERE e.type = 'StudentEnrollment' AND e.workflow_state = 'active' AND ${live}) AS enrollments_active,
+          WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active' AND ${live}) AS enrollments_active,
         (SELECT count(*) FROM dbo.canvas_assignments a JOIN dbo.canvas_courses c ON c.id = a.context_id AND a.context_type = 'Course'
           WHERE a.workflow_state <> 'deleted' AND ${live}) AS assignments,
         (SELECT count(*) FROM dbo.canvas_assignments a JOIN dbo.canvas_courses c ON c.id = a.context_id AND a.context_type = 'Course'
@@ -41,7 +43,7 @@ export async function GET(request) {
 
     const groups = await q(`
       SELECT g.key, count(DISTINCT c.id) AS courses,
-             count(DISTINCT e.user_id) FILTER (WHERE e.type = 'StudentEnrollment' AND e.workflow_state = 'active') AS students,
+             count(DISTINCT e.user_id) FILTER (WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active') AS students,
              count(DISTINCT e.user_id) FILTER (WHERE e.type = 'TeacherEnrollment' AND e.workflow_state = 'active') AS instructors
       FROM (SELECT c.id, ${groupExpr('c')} AS key FROM dbo.canvas_courses c WHERE ${scopeOnly}) g
       JOIN dbo.canvas_courses c ON c.id = g.id

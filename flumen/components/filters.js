@@ -40,6 +40,7 @@ export function useFilters(defaults = {}) {
       grain: sp.get('grain') || p.grain || 'month',
       group: programParam(program), course: sp.get('course') || '',
       compare: sp.get('compare') || 'prev',
+      tests: sp.get('tests') === 'include',
     };
   }, [sp, defaults.range, program]);
 
@@ -63,6 +64,7 @@ export function useFilters(defaults = {}) {
     if (f.to) p.set('to', f.to);
     if (f.group) p.set('group', f.group);
     if (f.course) p.set('course', f.course);
+    if (f.tests) p.set('tests', 'include');
     return p.toString();
   }, [scope, f]);
 
@@ -78,11 +80,12 @@ export function describe(f, { programs = [], courses = [], scope } = {}) {
   if (f.group) parts.push(programs.find(p => p.key === f.group)?.label || f.group);
   if (f.course) { const c = courses.find(x => String(x.id) === String(f.course)); parts.push(c ? c.name : `Course ${f.course}`); }
   parts.push(scope === 'all' ? 'All Canvas courses' : 'CampusCE courses');
+  parts.push(f.tests ? 'Test enrollments included' : 'Test enrollments excluded');
   return parts.join(' · ');
 }
 
-export function FilterBar({ f, set, programs = [], courses = [], showGrain = true, showCourse = true, showCompare = false, right }) {
-  const active = f.group !== 'cla' || f.course || f.range !== 'all';
+export function FilterBar({ f, set, programs = [], courses = [], showGrain = true, showCourse = true, showCompare = false, showTests = true, right }) {
+  const active = f.group !== 'cla' || f.course || f.range !== 'all' || f.tests;
   return (
     <div className="card-sm flex flex-wrap items-end gap-3 py-3">
       <Field label="Date range">
@@ -129,8 +132,17 @@ export function FilterBar({ f, set, programs = [], courses = [], showGrain = tru
           </select>
         </Field>
       )}
+      {showTests && (
+        <Field label="Test enrollments">
+          <select className="select" value={f.tests ? 'include' : ''} onChange={e => set({ tests: e.target.value })}
+            title="CampusCE test accounts and enrollments marked on the Drops page">
+            <option value="">Excluded</option>
+            <option value="include">Included</option>
+          </select>
+        </Field>
+      )}
       {active && (
-        <button onClick={() => set({ range: 'all', group: 'cla', course: '', grain: '' })}
+        <button onClick={() => set({ range: 'all', group: 'cla', course: '', grain: '', tests: '' })}
           className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-200 px-2 py-2">
           <X className="w-3.5 h-3.5" /> Reset
         </button>

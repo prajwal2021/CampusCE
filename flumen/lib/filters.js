@@ -4,6 +4,7 @@
  * only ever sees whitelisted keys or bound parameters.
  */
 import { GROUPS, groupExpr, scopeCond } from '@/lib/portal';
+import { notTest, includeTests } from '@/lib/exclusions';
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 export const GRAINS = ['day', 'week', 'month', 'quarter', 'year'];
@@ -18,6 +19,7 @@ export function parseFilters(sp) {
     from: iso(sp.get('from')),
     to: iso(sp.get('to')),
     grain: GRAINS.includes(sp.get('grain')) ? sp.get('grain') : 'month',
+    tests: includeTests(sp),
   };
 }
 
@@ -30,6 +32,7 @@ export class Params {
 /**
  * WHERE clause for student enrollments joined as e (enrollments) and c (courses).
  * range: { from, to } overrides the filter's dates (used for comparison periods); dates: false drops them.
+ * Test enrollments (lib/exclusions) are left out unless the filter asks for them.
  */
 export function enrollWhere(f, p, { dates = true, range } = {}) {
   const w = [
@@ -37,6 +40,7 @@ export function enrollWhere(f, p, { dates = true, range } = {}) {
     `e.workflow_state NOT IN ('deleted', 'rejected')`,
     `c.workflow_state <> 'deleted'`,
   ];
+  if (!f.tests) w.push(notTest('e'));
   if (scopeCond(f.scope)) w.push(scopeCond(f.scope));
   if (f.group) w.push(`${groupExpr('c')} = '${f.group}'`);
   if (f.course) w.push(`c.id = ${p.add(f.course)}`);

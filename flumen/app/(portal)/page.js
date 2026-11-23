@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Users, GraduationCap, CheckCircle2, TrendingUp, BookOpen, UserSquare2, ArrowRight, FileBarChart2, RefreshCw,
-  Search, Layers, ListChecks,
+  Search, Layers, ListChecks, UserMinus,
 } from 'lucide-react';
 import { useFetch, Loading, ErrorBox, PageShell, StatusBadge, fmtNum, fmtDate, fmtDateTime, linkCls } from '@/components/portal';
 import { Kpi, Delta, Sparkline, TrendChart, Bars, ShareBars, ReportCard } from '@/components/charts';
@@ -206,6 +206,7 @@ export default function Home() {
           <div className="grid grid-cols-1 gap-2">
             {[
               { href: '/enrollments', icon: Users, title: 'Enrollment dashboard', text: 'Filter by date, program and course' },
+              { href: '/drops', icon: UserMinus, title: 'Drops & retention', text: 'Drop rate without test enrollments' },
               { href: '/reports', icon: FileBarChart2, title: 'Reports', text: 'Trends, comparisons and exports' },
               { href: '/browse/students', icon: Search, title: 'Find a student', text: 'By name or CampusCE number' },
               { href: '/programs', icon: Layers, title: 'Programs', text: 'CLA, microcertificates, CCFCS' },

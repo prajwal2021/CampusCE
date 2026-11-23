@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { GROUPS, CLA_EXPECTED, groupExpr, scopeCond } from '@/lib/portal';
+import { notTest } from '@/lib/exclusions';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request, { params }) {
   try {
     const key = params.key;
+    const T = notTest('e');   // leave CampusCE test enrollments out
     const def = GROUPS[key];
     if (!def) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
 
@@ -20,18 +22,18 @@ export async function GET(request, { params }) {
            (SELECT count(*) FROM dbo.canvas_course_sections s JOIN dbo.canvas_courses c ON c.id = s.course_id
              WHERE ${inGroup} AND s.workflow_state <> 'deleted') AS sections,
            (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-             WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected')) AS students,
+             WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state NOT IN ('deleted', 'rejected')) AS students,
            (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-             WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND e.workflow_state = 'active') AS students_active,
+             WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active') AS students_active,
            (SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
              WHERE ${inGroup} AND e.type = 'TeacherEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected')) AS instructors,
            (SELECT count(*) FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-             WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected')) AS enrollments,
+             WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state NOT IN ('deleted', 'rejected')) AS enrollments,
            (SELECT count(*) FROM dbo.canvas_assignments a JOIN dbo.canvas_courses c ON c.id = a.context_id AND a.context_type = 'Course'
              WHERE ${inGroup} AND a.workflow_state = 'published') AS assignments`),
 
       q(`SELECT ${def.breakdown} AS label, count(DISTINCT c.id) AS courses,
-                count(DISTINCT e.user_id) FILTER (WHERE e.type = 'StudentEnrollment' AND e.workflow_state = 'active') AS students
+                count(DISTINCT e.user_id) FILTER (WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active') AS students
          FROM dbo.canvas_courses c
          LEFT JOIN dbo.canvas_enrollments e ON e.course_id = c.id
          WHERE ${inGroup}
@@ -40,7 +42,7 @@ export async function GET(request, { params }) {
       q(`SELECT c.id, c.name,
                 CASE c.workflow_state WHEN 'available' THEN 'Published' WHEN 'claimed' THEN 'Unpublished'
                      WHEN 'completed' THEN 'Concluded' ELSE c.workflow_state END AS status,
-                (SELECT count(*) FROM dbo.canvas_enrollments e WHERE e.course_id = c.id AND e.type = 'StudentEnrollment' AND e.workflow_state = 'active') AS students
+                (SELECT count(*) FROM dbo.canvas_enrollments e WHERE e.course_id = c.id AND e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active') AS students
          FROM dbo.canvas_courses c WHERE ${inGroup}
          ORDER BY students DESC, c.name LIMIT 8`),
 
@@ -55,7 +57,7 @@ export async function GET(request, { params }) {
          FROM dbo.canvas_enrollments e
          JOIN pub ON pub.course_id = e.course_id
          LEFT JOIN done ON done.course_id = e.course_id AND done.user_id = e.user_id
-         WHERE e.type = 'StudentEnrollment' AND e.workflow_state = 'active'`),
+         WHERE e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state = 'active'`),
 
       q(`SELECT u.id AS user_id, u.name, count(DISTINCT e.course_id) AS courses
          FROM dbo.canvas_enrollments e
@@ -70,7 +72,7 @@ export async function GET(request, { params }) {
       const s = await q(`WITH en AS (
           SELECT e.user_id, e.course_id, bool_or(e.workflow_state = 'completed' OR e.completed_at IS NOT NULL) AS done
           FROM dbo.canvas_enrollments e JOIN dbo.canvas_courses c ON c.id = e.course_id
-          WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected')
+          WHERE ${inGroup} AND e.type = 'StudentEnrollment' AND ${T} AND e.workflow_state NOT IN ('deleted', 'rejected')
             AND substr(c.sis_source_id, 3, 1) <> '0'
           GROUP BY e.user_id, e.course_id),
         per AS (SELECT user_id, count(*) AS enrolled, count(*) FILTER (WHERE done) AS completed FROM en GROUP BY user_id)

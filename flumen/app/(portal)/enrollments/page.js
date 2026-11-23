@@ -44,7 +44,7 @@ function Dashboard() {
   const cmp = p ? 'vs previous period' : null;
   const grainName = GRAIN_LABEL[f.grain].toLowerCase();
   const periodCol = { key: 'period', label: 'Period', fmt: v => fmtPeriod(v, f.grain, true) };
-  const listExtra = new URLSearchParams({ ...(f.from && { from: f.from }), ...(f.to && { to: f.to }), ...(f.course && { course: f.course }) }).toString();
+  const listExtra = new URLSearchParams({ ...(f.from && { from: f.from }), ...(f.to && { to: f.to }), ...(f.course && { course: f.course }), ...(f.tests && { tests: 'include' }) }).toString();
 
   return (
     <PageShell>
@@ -58,7 +58,7 @@ function Dashboard() {
             sub={k.students ? `${(k.enrollments / k.students).toFixed(1)} enrollments per student` : null} />
           <Kpi label="In progress" icon={PlayCircle} value={fmtNum(k.active)} sub={k.enrollments ? `${Math.round((100 * k.active) / k.enrollments)}% of enrollments` : null} />
           <Kpi label="Finished all assignments" icon={CheckCircle2} value={fmtNum(k.finished_all)} sub={`${pct(k.finished_rate)} of enrollments · ${fmtNum(k.completed)} concluded in Canvas`} />
-          <Kpi label="Dropped" icon={UserMinus} value={fmtNum(k.dropped)} delta={cmp && <Delta cur={k.dropped} prev={p.dropped} invert suffix={cmp} />} sub={`Drop rate ${pct(k.drop_rate)}`} />
+          <Kpi label="Dropped" icon={UserMinus} href="/drops" value={fmtNum(k.dropped)} delta={cmp && <Delta cur={k.dropped} prev={p.dropped} invert suffix={cmp} />} sub={`Drop rate ${pct(k.drop_rate)}`} />
           <Kpi label="Avg assignment progress" icon={TrendingUp} value={pct(k.avg_progress)} sub="Published assignments turned in" />
         </div>
 

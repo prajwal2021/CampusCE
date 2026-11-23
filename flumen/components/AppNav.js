@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 import {
-  Home, Users, FileBarChart2, Layers, BookOpen, GraduationCap, UserSquare2, LayoutList, ClipboardList, ListChecks, X,
+  Home, Users, UserMinus, FileBarChart2, Layers, BookOpen, GraduationCap, UserSquare2, LayoutList, ClipboardList, ListChecks, X,
 } from 'lucide-react';
 import ProfileMenu from '@/components/ProfileMenu';
 
@@ -18,6 +18,7 @@ const SECTIONS = [
     title: 'Insights',
     items: [
       { href: '/enrollments', label: 'Enrollments', icon: Users },
+      { href: '/drops', label: 'Drops & retention', icon: UserMinus },
       { href: '/reports', label: 'Reports', icon: FileBarChart2 },
       { href: '/programs', label: 'Programs', icon: Layers, also: ['/group'] },
     ],

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { CLA_EXPECTED, CLA_FREE_SKUS, CLA_MC_SKUS, CLA_CAREER_SKUS, CLA_TRACKS, trackOfSku } from '@/lib/portal';
+import { notTest } from '@/lib/exclusions';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export async function GET(request, { params }) {
        FROM dbo.canvas_enrollments e
        JOIN dbo.canvas_courses c ON c.id = e.course_id AND c.workflow_state <> 'deleted'
        JOIN dbo.canvas_users u ON u.id = e.user_id
-       WHERE c.sis_source_id = ANY($1) AND e.type = 'StudentEnrollment' AND e.workflow_state <> 'rejected'`,
+       WHERE c.sis_source_id = ANY($1) AND e.type = 'StudentEnrollment' AND e.workflow_state <> 'rejected' AND ${notTest('e')}`,
       [CLA_EXPECTED.map(e => e.sis)]);
 
     const now = Date.now();

@@ -209,16 +209,16 @@ function UnderTick({ x, y, payload, fill, perLine = 14 }) {
 }
 const legendStyle = c => ({ fontSize: 12, color: c.muted, paddingTop: 8 });
 
-/** Time series. series: [{ key, label }]; kind: 'area' | 'line' | 'bar'. */
+/** Time series. series: [{ key, label, slot?, color? }]; kind: 'area' | 'line' | 'bar'. */
 export function TrendChart({ data, series, grain = 'month', kind: wanted = 'area', height = 280, stacked = false, valueFmt }) {
   const c = useChartColors();
   if (!data?.length) return <Empty />;
   // a line through two or three points reads as a cliff; columns are honest for short histories
   const kind = data.length <= 6 ? 'bar' : wanted;
-  const color = i => c.series[i];
+  const color = i => series[i].color || c.series[series[i].slot ?? i];
   const common = { data, margin: { top: 10, right: 12, left: -8, bottom: 0 } };
   const x = <XAxis dataKey="period" tickFormatter={v => fmtPeriod(v, grain)} {...axis(c)} minTickGap={24} />;
-  const y = <YAxis {...axis(c)} allowDecimals={false} width={48} tickFormatter={fmtN} />;
+  const y = <YAxis {...axis(c)} allowDecimals={false} width={48} tickFormatter={valueFmt || fmtN} />;
   const grid = <CartesianGrid stroke={c.grid} vertical={false} />;
   const tip = <Tooltip content={<TipBox labelFmt={v => fmtPeriod(v, grain, true)} valueFmt={valueFmt} />} cursor={{ stroke: c.axis, strokeDasharray: '3 3' }} />;
   const legend = series.length > 1 ? <Legend iconType="circle" iconSize={8} wrapperStyle={legendStyle(c)} /> : null;

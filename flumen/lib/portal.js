@@ -15,6 +15,8 @@ const idJoin = (alias, col, pattern, userAlias) => `LEFT JOIN (
 export const CE_JOIN = (userAlias = 'u', alias = 'cen') => idJoin(alias, 'ce_number', '^CE[0-9]+$', userAlias);
 export const RNUM_JOIN = (userAlias = 'u', alias = 'rn') => idJoin(alias, 'r_number', '^R[0-9]{8}$', userAlias);
 
+import { notTest } from '@/lib/exclusions';
+
 const SUB_STUDENTS = `(SELECT count(*) FROM dbo.canvas_enrollments e WHERE e.course_id = c.id AND e.type = 'StudentEnrollment' AND e.workflow_state = 'active')`;
 const SUB_TEACHERS = `(SELECT count(DISTINCT e.user_id) FROM dbo.canvas_enrollments e WHERE e.course_id = c.id AND e.type = 'TeacherEnrollment' AND e.workflow_state = 'active')`;
 
@@ -80,6 +82,7 @@ const personDerived = (type, group, scope) => `(
   JOIN dbo.canvas_courses c ON c.id = e.course_id AND c.workflow_state <> 'deleted'
   ${CE_JOIN('u')}
   WHERE e.type = '${type}' AND e.workflow_state NOT IN ('deleted', 'rejected')
+    ${type === 'StudentEnrollment' ? `AND ${notTest('e')}` : ''}
     ${group ? `AND ${groupExpr('c')} = '${group}'` : ''}
     ${scopeCond(scope) ? `AND ${scopeCond(scope)}` : ''}
   GROUP BY u.id, u.name, u.sortable_name, cen.ce_number) p`;
@@ -171,6 +174,7 @@ export const TYPES = {
            ${CE_JOIN('u')}`,
     dateCol: 'e.created_at',
     courseCol: 'c.id',
+    testAlias: 'e',
     where: `e.type = 'StudentEnrollment' AND e.workflow_state NOT IN ('deleted', 'rejected') AND c.workflow_state <> 'deleted'`,
     select: `e.id, u.id AS user_id, c.id AS course_id, u.name AS student, cen.ce_number, c.name AS course, c.sis_source_id AS sku, s.name AS section,
              ${ENROLL_STATE} AS status, e.created_at AS enrolled, coalesce(e.completed_at, CASE WHEN e.workflow_state = 'completed' THEN e.updated_at END) AS completed,
