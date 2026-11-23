@@ -21,7 +21,7 @@ export default function PortalLayout({ children }) {
               <GlobalSearch />
               <div className="ml-auto flex items-center gap-3 shrink-0">
                 <ProgramSelect />
-                <ScopeToggle />
+                <div className="hidden sm:block"><ScopeToggle /></div>
               </div>
             </div>
           </header>
