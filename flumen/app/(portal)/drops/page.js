@@ -243,7 +243,7 @@ function Records({ d, f, label, onChanged }) {
   return (
     <section className="card p-0">
       <div className="px-5 pt-4 pb-3 flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[240px] flex-1">
           <h3 className="section-title">Drop records</h3>
           <p className="text-xs text-zinc-500 mt-0.5">Each enrollment dropped in the date range, newest first. Tick rows to mark them as tests.</p>
         </div>
@@ -251,7 +251,7 @@ function Records({ d, f, label, onChanged }) {
           { value: 'all', label: `All ${fmtNum(counts.all)}` }, { value: 'real', label: `Real ${fmtNum(counts.real)}` }, { value: 'test', label: `Tests ${fmtNum(counts.test)}` }]} />
         <div className="relative">
           <Search className="w-4 h-4 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input className="select pl-8 w-56" placeholder="Student, CE #, course, SKU" value={term} onChange={e => setTerm(e.target.value)} />
+          <input className="select pl-8 w-full sm:w-56" placeholder="Student, CE #, course, SKU" value={term} onChange={e => setTerm(e.target.value)} />
         </div>
         <ExportMenu compact
           onPDF={() => downloadPDF({ title, reports: [{ title, table }], filters: label, dataAsOf: d.data_as_of })}
@@ -356,11 +356,11 @@ function TestsTab({ onChanged }) {
 
       <section className="card p-0">
         <div className="px-5 pt-4 pb-3 flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-[240px]">
             <h3 className="section-title">Likely test accounts</h3>
             <p className="text-xs text-zinc-500 mt-0.5">Student accounts with “test” in the name or login that aren't excluded yet. Check each one before excluding it.</p>
           </div>
-          <input className="select w-64" placeholder="Reason (optional)" value={reason} onChange={e => setReason(e.target.value)} />
+          <input className="select w-full sm:w-64" placeholder="Reason (optional)" value={reason} onChange={e => setReason(e.target.value)} />
         </div>
         <PeopleTable rows={x.suggestions} empty="No likely test accounts left to review."
           cols={[['Why', r => r.why], ['Programs', r => r.programs], ['Latest enrollment', r => fmtDate(r.latest)]]}
